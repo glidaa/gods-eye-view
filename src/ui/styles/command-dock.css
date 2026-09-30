@@ -307,3 +307,37 @@ body.recording-mode #cesium-credits {
     bottom: calc(50vh + 8px);
   }
 }
+
+/* The dock lives in the left stack below the layers: one vertical unit in
+   the rail flow instead of a bottom-center grid. All inner tray rules keep
+   matching because the #command-dock ancestor is unchanged. Static
+   positioning makes the bottom offsets above moot for the in-stack dock. */
+#left-panel-stack > #command-dock {
+  position: static;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  transform: none;
+  width: 100%;
+  max-width: none;
+  grid-template-areas:
+    'locations'
+    'voice'
+    'presets';
+  grid-template-columns: minmax(0, 1fr);
+}
+
+#left-panel-stack > #command-dock > #location-bar {
+  border-right: 0;
+  border-bottom: 1px solid rgba(123, 189, 211, 0.16);
+}
+
+#left-panel-stack > #command-dock > #control-panel {
+  border-top: 1px solid rgba(123, 189, 211, 0.16);
+  border-left: 0;
+}
+
+#left-panel-stack > #command-dock > #gev-voice-control {
+  margin: 0;
+}

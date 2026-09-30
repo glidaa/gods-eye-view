@@ -202,6 +202,9 @@ const RECOGNIZED = new Set([
   '#command-dock',
   '#command-dock:has(#location-bar:not(.collapsed))',
   '#command-dock:has(#control-panel:not(.collapsed))',
+  // dock docked in the left stack below the layers: static in-flow unit, so
+  // its box never floats over the credit clearance band.
+  '#left-panel-stack > #command-dock',
   // rail
   '#right-context-rail',
   '#right-context-rail.layout-focus',

@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 // Exercise the installed event routes and central close method, without WebGL.
 const source = readShellSource();
 const markup = expandApplicationHtml(readFileSync(new URL('../index.html', import.meta.url), 'utf8'));
-const locationMarkup = markup.slice(markup.indexOf('<div id="location-bar"'), markup.indexOf('<div id="left-panel-stack"'));
+const locationMarkup = markup.slice(markup.indexOf('<div id="location-bar"'), markup.indexOf('<div id="control-panel"'));
 const locationToggleMarkup = locationMarkup.match(/<button\b([^>]*\bid="location-bar-toggle"[^>]*)>([\s\S]*?)<\/button>/);
 const locationToggleAttributes = Object.fromEntries(
   [...(locationToggleMarkup?.[1] || '').matchAll(/([\w-]+)="([^"]*)"/g)].map((match) => [match[1], match[2]]),
