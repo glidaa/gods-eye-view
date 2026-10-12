@@ -23,6 +23,7 @@ import { keySetupEndpoint } from '../standalone/key-setup.js';
 import { weatherProxy } from './weather.js';
 import { cycloneProxy } from './cyclones.js';
 import { windProxy } from './wind.js';
+import { nemProxy } from './nem.js';
 
 /** Construct the local provider plugins in their established order. */
 function localProviderPlugins() {
@@ -51,6 +52,7 @@ function localProviderPlugins() {
     windProxy(),
     weatherProxy(),
     cycloneProxy(),
+    nemProxy(),
     keySetupEndpoint(),
   ];
 }

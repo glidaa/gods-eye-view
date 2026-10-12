@@ -20,7 +20,7 @@ import {
 
 const PANEL_ID = 'recent-imagery-panel';
 const OVERVIEW_MIN_BOX_KM = 25;
-const ESRI_NOTE = 'Imagery on Esri · Google 3D returns when cleared';
+const ESRI_NOTE = 'Imagery on Esri';
 const MODE_LABELS = [
   ['image', 'IMAGE'],
   ['basemap', 'VS BASEMAP'],

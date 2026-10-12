@@ -666,7 +666,7 @@ export function createDirectionsLayer({ services }) {
       },
       label: {
         text: letter,
-        font: 'bold 13px "JetBrains Mono", "SF Mono", monospace',
+        font: 'bold 13px "Open Sans", sans-serif',
         fillColor: Cesium.Color.WHITE,
         outlineColor: Cesium.Color.BLACK,
         outlineWidth: 3,

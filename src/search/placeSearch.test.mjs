@@ -16,17 +16,19 @@ test('malformed successful Photon responses remain retryable', async () => {
   }
 });
 
-test('standalone geocoding falls back after Google connection, JSON and refusal failures', async () => {
-  for (const fail of [() => { throw new Error('offline'); }, () => new Response('invalid json'), () => Response.json({ status: 'REQUEST_DENIED' })]) {
-    const urls = [];
-    const service = createStandalonePlaceSearch({ resolveApiKey: () => 'fixture', fetchImpl: async (url) => {
-      urls.push(url); return url.includes('maps.googleapis.com') ? fail() : hit();
-    } });
-    const result = await service.geocode('Hanoi');
-    assert.equal(result.place.name, 'Hà Nội');
-    assert.equal(result.fallbackUsed, true);
-    assert.equal(urls.length, 2);
-  }
+test('standalone geocoding tries Photon first, then the local Nominatim route', async () => {
+  const urls = [];
+  const service = createStandalonePlaceSearch({ fetchImpl: async (url) => {
+    urls.push(url);
+    if (url.includes('photon.komoot.io')) return Response.json({ features: [] });
+    return Response.json({ status: 'OK', results: [{ formatted_address: 'Hanoi', geometry: { location: { lat: 21.03, lng: 105.85 } }, types: ['locality'] }] });
+  } });
+  const result = await service.geocode('Hanoi');
+  assert.equal(new URL(urls[0]).hostname, 'photon.komoot.io');
+  assert.equal(result.place.label, 'Hanoi');
+  assert.equal(result.place.lat, 21.03);
+  assert.equal(result.fallbackUsed, true);
+  assert.equal(urls.length, 2);
 });
 
 test('a keyless service does not issue any Google request', async () => {
@@ -56,7 +58,7 @@ test('cancellation stops Photon retries and does not cache a late response', asy
   assert.equal(calls, 2);
 });
 
-test('a Google request cancelled by its caller never starts the fallback', async () => {
+test('a provider request cancelled by its caller never starts the fallback', async () => {
   const controller = new AbortController(); let fallbackCalls = 0;
   const service = createPlaceSearch({ providers: [
     createGoogleGeocoder({ request: async () => { controller.abort(); return Response.json({ status: 'ZERO_RESULTS', results: [] }); } }),

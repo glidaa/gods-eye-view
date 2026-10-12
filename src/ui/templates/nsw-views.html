@@ -1,0 +1,25 @@
+<!-- NSW demo displays: quick icon dock plus a menu of every curated view.
+       Buttons render from NSW_VIEWS in src/ui/nswViews.js; this markup is
+       the containers only. Sits bottom-left above the credit line. -->
+<div id="nsw-views" class="nsw-views" aria-label="NSW demo displays">
+  <div
+    class="nsw-views-menu-list"
+    data-nsw-views-menu-list
+    role="menu"
+    aria-label="All locations"
+    hidden
+  ></div>
+  <div
+    class="nsw-views-row"
+    data-nsw-views-row
+    role="toolbar"
+    aria-label="Demo displays"
+  ></div>
+  <button
+    type="button"
+    class="nsw-view-btn nsw-views-menu-btn"
+    data-nsw-views-menu
+    aria-haspopup="true"
+    aria-expanded="false"
+  ></button>
+</div>

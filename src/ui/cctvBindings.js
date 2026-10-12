@@ -119,6 +119,19 @@ export function _initCctvPanel() {
     this.actions.setParams({ showProjection: !current }, { origin: 'user' });
   });
 
+  // Image settings live behind SETTINGS so the panel stays a clean
+  // frame + transport; the calibration block is inert while hidden.
+  this.listen(this._cctvSettingsBtn, 'click', () => {
+    const block = this._cctvCalibrationBlock;
+    if (!block) return;
+    const willShow = block.hidden;
+    block.hidden = !willShow;
+    this._cctvSettingsBtn.setAttribute('aria-expanded', String(willShow));
+    this._cctvSettingsBtn.title = willShow
+      ? 'Hide image calibration settings'
+      : 'Show image calibration settings';
+  });
+
   this.listen(this._cctvAdjustBtn, 'click', () => {
     const current = !!this._cctvState?.calibrationMode;
     this.actions.setParams({ calibrationMode: !current }, { origin: 'user' });

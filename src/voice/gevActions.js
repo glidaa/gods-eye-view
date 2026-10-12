@@ -238,7 +238,7 @@ const CITY_ALIASES = new Map([
 ]);
 
 // Basemap stack vocabulary. Switching requires an explicit stack name
-// ("Bing aerial", "road map", "OSM", "Google 3D") — any "satellite(s)"
+// ("Bing aerial", "road map", "OSM", "Esri") — any "satellite(s)"
 // phrasing ALWAYS means the satellites DATA LAYER, never a basemap; the
 // session instructions carry the decision table.
 //
@@ -247,11 +247,6 @@ const CITY_ALIASES = new Map([
 // cleanly and then fail at the controller with "Unknown map stack", which reads
 // to the operator as a broken command rather than a retired source.
 const STACK_ALIASES = new Map([
-  ['photoreal', 'photoreal'],
-  ['google 3d', 'photoreal'],
-  ['google', 'photoreal'],
-  ['3d', 'photoreal'],
-  ['photorealistic', 'photoreal'],
   ['bing-aerial', 'bing-aerial'],
   ['bing aerial', 'bing-aerial'],
   ['bing-labels', 'bing-labels'],
@@ -3450,8 +3445,8 @@ async function getBasemapContext(
       cachedViewportPlaces,
     );
     return {
-      source: 'Google Photorealistic 3D Tiles / Cesium basemap',
-      hasGoogle3DTiles: Boolean(window.__godsEyeView?.tileset),
+      source: 'Esri World Imagery / OSM basemap',
+      has3DTiles: false,
       viewScale,
       viewportSamples: samples,
       viewportPlaces,
@@ -3515,8 +3510,8 @@ async function getBasemapContext(
   const place = resolvedPlace || fallbackPlace;
   const nearbyPlaces = resolvedNearbyPlaces || [];
   return {
-    source: 'Google Photorealistic 3D Tiles / Cesium basemap',
-    hasGoogle3DTiles: Boolean(window.__godsEyeView?.tileset),
+    source: 'Esri World Imagery / OSM basemap',
+    has3DTiles: false,
     viewScale,
     viewportSamples: samples,
     viewportPlaces,
@@ -4161,6 +4156,9 @@ function cleanText(value) {
 function layerTitle(layerId) {
   if (layerId === 'local-datacenters') return 'Datacenter';
   if (layerId === 'local-dams') return 'Dam';
+  if (layerId === 'local-au-power') return 'Power Station';
+  if (layerId === 'local-au-mines') return 'Mine';
+  if (layerId === 'local-au-ports') return 'Port';
   if (layerId === 'telegeography-submarine-cables') return 'Submarine Cable';
   if (layerId === 'local-firms') return 'Active Fire';
   return layerId || 'Entity';
@@ -4236,7 +4234,16 @@ function analystProviders(
       });
     },
     getRecordCoverage(layerKey, rows) {
-      if (!['satellites', 'local-datacenters', 'local-dams'].includes(layerKey))
+      if (
+        ![
+          'satellites',
+          'local-datacenters',
+          'local-dams',
+          'local-au-power',
+          'local-au-mines',
+          'local-au-ports',
+        ].includes(layerKey)
+      )
         return null;
       const module = dataManager.layers.get(layerKey)?.module;
       const loaded = module?.getStats?.().count;

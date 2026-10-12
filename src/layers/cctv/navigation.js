@@ -1,5 +1,39 @@
 import * as Cesium from 'cesium';
-import { CCTV_FOCUS_RESULT } from './policy.js';
+import { CCTV_FOCUS_RESULT, CCTV_HOP_POOL_LIMIT } from './policy.js';
+
+/**
+ * Nearest-first record indices around a point, capped at `limit`: the
+ * slideshow pool, so automatic hops show cameras from the viewed area
+ * instead of random points on the planet. Pure.
+ * @param {Array} records - Catalog records with `camera.lat/lon`.
+ * @param {number} lat - Viewer latitude in degrees.
+ * @param {number} lon - Viewer longitude in degrees.
+ * @param {number} limit - Maximum pool size; non-positive keeps everything.
+ * @param {(lat1: number, lon1: number, lat2: number, lon2: number) => number} haversineKm - Distance helper.
+ * @returns {Array<number>} Indices into `records`, nearest first.
+ */
+export function cctvHopPoolIndices(records, lat, lon, limit, haversineKm) {
+  if (!Array.isArray(records) || !records.length) return [];
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lon) ||
+    typeof haversineKm !== 'function'
+  )
+    return records.map((_, index) => index);
+  const ranked = records
+    .map((record, index) => ({
+      index,
+      distKm: haversineKm(lat, lon, record?.camera?.lat, record?.camera?.lon),
+    }))
+    .filter((entry) => Number.isFinite(entry.distKm))
+    .sort((a, b) => a.distKm - b.distKm)
+    .map((entry) => entry.index);
+  const capped =
+    Number.isFinite(limit) && limit > 0
+      ? ranked.slice(0, Math.floor(limit))
+      : ranked;
+  return capped.length ? capped : records.map((_, index) => index);
+}
 
 export function createNavigation({
   state: layerState,
@@ -12,11 +46,19 @@ export function createNavigation({
    * @returns {string|null} Camera ID of the nearest camera, or null.
    */
 
-  function nearestCameraIdToViewer() {
+  function viewerLatLon() {
     const carto = layerState._viewer?.camera?.positionCartographic;
-    if (!carto || !layerState._records.length) return null;
-    const lat = Cesium.Math.toDegrees(carto.latitude);
-    const lon = Cesium.Math.toDegrees(carto.longitude);
+    if (!carto) return null;
+    return {
+      lat: Cesium.Math.toDegrees(carto.latitude),
+      lon: Cesium.Math.toDegrees(carto.longitude),
+    };
+  }
+
+  function nearestCameraIdToViewer() {
+    const view = viewerLatLon();
+    if (!view || !layerState._records.length) return null;
+    const { lat, lon } = view;
 
     let best = null;
     for (const record of layerState._records) {
@@ -118,14 +160,28 @@ export function createNavigation({
       }
     }
 
-    const nextIdx = cctvCycleIndex(
-      layerState._records.findIndex(
-        (record) => record.camera.id === layerState._activeCameraId,
-      ),
-      1,
-      layerState._records.length,
+    // Random pick, never the same camera twice in a row: the panel is a
+    // live slideshow, not a sequential tour. (The PREV/NEXT cycler is
+    // untouched; only the automatic hop is random.) The draw pools the
+    // nearest cameras to the viewer, so the slideshow shows the area on
+    // screen; without a viewer fix it falls back to the whole catalog.
+    const currentIdx = layerState._records.findIndex(
+      (record) => record.camera.id === layerState._activeCameraId,
     );
-    parts.selection.setActiveCamera(layerState._records[nextIdx].camera.id);
+    const view = viewerLatLon();
+    const pool = view
+      ? cctvHopPoolIndices(
+          layerState._records,
+          view.lat,
+          view.lon,
+          CCTV_HOP_POOL_LIMIT,
+          parts.model.haversineKm,
+        )
+      : layerState._records.map((_, index) => index);
+    const nextIdx = cctvRandomHopIndex(pool.indexOf(currentIdx), pool.length);
+    parts.selection.setActiveCamera(
+      layerState._records[pool[nextIdx]].camera.id,
+    );
     layerState._lastHopAt = nowMs;
   }
 
@@ -147,11 +203,31 @@ export function createNavigation({
     }
     return (((Math.floor(currentIdx) + delta) % total) + total) % total;
   }
+
+  /**
+   * Random hop target that never repeats the active camera: a draw landing
+   * on the current index steps forward one (wrapping), so a slideshow of
+   * any size always moves. Pure — the random source is injectable for tests.
+   * @param {number} currentIdx - Active index, or -1 for no selection.
+   * @param {number} count - Catalog size.
+   * @param {() => number} [random=Math.random] - Random source in [0,1).
+   * @returns {number} Target index, or -1 when the catalog is empty.
+   */
+  function cctvRandomHopIndex(currentIdx, count, random = Math.random) {
+    const total = Number.isFinite(count) ? Math.floor(count) : 0;
+    if (total <= 0) return -1;
+    if (total === 1) return 0;
+    const draw = Math.floor(random() * total);
+    const current = Math.floor(currentIdx);
+    if (draw === current) return (draw + 1) % total;
+    return Math.max(0, Math.min(total - 1, draw));
+  }
   return {
     nearestCameraIdToViewer,
     focusCctvRecord,
     focusCamera,
     maybeAutoHop,
     cctvCycleIndex,
+    cctvRandomHopIndex,
   };
 }

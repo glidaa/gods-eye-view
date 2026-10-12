@@ -45,10 +45,10 @@ export function createVoiceControl({ reset = false } = {}) {
     const commandDock = document.getElementById('command-dock');
     if (commandDock) {
       const locationBar = document.getElementById('location-bar');
-      const controlPanel = document.getElementById('control-panel');
       commandDock.appendChild(root);
       if (locationBar) commandDock.insertBefore(locationBar, root);
-      if (controlPanel) commandDock.appendChild(controlPanel);
+      // The visual presets tray docks in the right rail (panel layout
+      // assembly owns it) — never pull it back into the command dock.
     } else {
       document.body.appendChild(root);
     }

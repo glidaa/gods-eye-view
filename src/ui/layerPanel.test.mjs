@@ -175,6 +175,68 @@ test('readout rows contain only toggles and metadata; ordinary rows retain contr
   }
 });
 
+test('the DATA LAYERS header counts showing versus available layers', async () => {
+  const { LayerPanel } = await import('./layerPanel.js');
+  const { railFixture } = await import('./railTestFixture.mjs');
+  const f = railFixture();
+  const counts = f.document.createElement('span');
+  f.document.getElementById = (id) =>
+    id === 'data-layer-counts' ? counts : null;
+  const previousDocument = globalThis.document;
+  globalThis.document = f.document;
+  const rows = [
+    {
+      id: 'a',
+      name: 'A',
+      icon: 'a',
+      enabled: true,
+      showInTogglePanel: true,
+      stats: {},
+    },
+    {
+      id: 'b',
+      name: 'B',
+      icon: 'b',
+      enabled: false,
+      showInTogglePanel: true,
+      stats: {},
+    },
+    {
+      id: 'hidden',
+      name: 'H',
+      icon: 'h',
+      enabled: true,
+      showInTogglePanel: false,
+      stats: {},
+    },
+  ];
+  const panel = new LayerPanel({
+    getLayers: () => rows,
+    isEnabled: (id) => rows.find((row) => row.id === id)?.enabled,
+    setEnabled: () => {},
+    setLayerParams: () => {},
+    getRowControls: () => null,
+    hasRowControls: () => false,
+    subscribeRowControls: () => null,
+  });
+  try {
+    panel.mount(f.container);
+    assert.equal(counts.textContent, 'SHOWING 1 · 2 AVAILABLE');
+    rows[1].enabled = true;
+    panel._syncShowingCounts(rows);
+    assert.equal(counts.textContent, 'SHOWING 2 · 2 AVAILABLE');
+    // An external toggle (CCTV panel, voice) refreshes through the activity
+    // subscription instead of the row handler; the header must still follow.
+    rows[0].enabled = false;
+    rows[1].enabled = false;
+    panel._refreshTogglePanel();
+    assert.equal(counts.textContent, 'SHOWING 0 · 2 AVAILABLE');
+  } finally {
+    panel.destroy();
+    globalThis.document = previousDocument;
+  }
+});
+
 test('the Recent Imagery readout mounts in its rail body like the weather readout and is rebuilt or released with the panel', async () => {
   const { LayerPanel } = await import('./layerPanel.js');
   const { railFixture } = await import('./railTestFixture.mjs');

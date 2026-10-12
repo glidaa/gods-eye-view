@@ -8,10 +8,11 @@
  * swipes that day (left) against the basemap (right); A / B swipes day `a`
  * (left) against day `b` (right). While the mode's slot is empty the focused
  * day previews in it. Two draped layers at most, and while any image is on
- * the map it borrows the Esri surface on Google 3D, and keeps it: a manual
- * switch back to Google 3D while a day is shown is answered with a new lease;
- * the map controller's own fallback to Google 3D is not, so a failing Esri
- * map is never retried in a loop.
+ * the map the layer holds the imagery-comparison lease (`preserve`: the
+ * map is never switched, so the lease is purely mutual exclusion between
+ * scenes sharing one controller). Every stack is a globe, so drapes and
+ * the swipe simply follow the operator's map across manual and automatic
+ * switches — nothing is borrowed and nothing is handed back.
  */
 import { searchHls } from './catalog.js';
 import { NO_IMAGERY_HOST, resolveImageryHost } from '../../maps/imageryHost.js';
@@ -47,9 +48,8 @@ export const SPLIT_PUBLISH_MS = 400;
 export const MODES = Object.freeze(['image', 'basemap', 'ab']);
 
 const COMPARISON_IN_USE = 'Comparison in use by another scene';
-const COMPARISON_UNAVAILABLE = 'Esri map unavailable · no swipe';
+const COMPARISON_UNAVAILABLE = 'Comparison map unavailable · no swipe';
 const COMPARISON_NEEDS_GLOBE = 'Swipe needs a globe map';
-const ESRI_KEPT = 'Imagery stays on Esri · CLEAR to use Google 3D';
 /** ZOOM IN's flight time, in seconds. */
 const ZOOM_FIT_SECONDS = 1.2;
 const DEFAULT_SPLIT = 0.5;
@@ -162,18 +162,6 @@ export function createRecentImageryLayer({
   let _alpha = 1;
 
   let _lease = null;
-  let _leaseFromPhotoreal = false;
-  /** The stack the lease switched to, once ready. */
-  let _leaseStackId = null;
-  /** The controller's switch generation right after the lease was taken. */
-  let _leaseGeneration = null;
-  /** The last switch generation answered with a new lease. */
-  let _keptGeneration = null;
-  /**
-   * The lease was let go because the map controller fell back to Google 3D
-   * on its own; the next manual switch to Google 3D may take Esri again.
-   */
-  let _droppedByFallback = false;
   let _releasing = null;
   let _comparisonReady = false;
   let _comparisonError = null;
@@ -382,14 +370,13 @@ export function createRecentImageryLayer({
   }
 
   /**
-   * Hand the lease back. The release restores the map asynchronously; no new
-   * lease is taken until it settles, and then the state is reconciled, so a
-   * new image inside that window re-acquires.
+   * Hand the lease back. The release settles asynchronously; no new lease
+   * is taken until it does, and then the state is reconciled, so a new
+   * image inside that window re-acquires.
    */
   function releaseComparison() {
     const lease = _lease;
     forgetLease();
-    if (_notice === ESRI_KEPT) _notice = null;
     if (!lease) return;
     const releasing = Promise.resolve()
       .then(() => lease.release())
@@ -406,11 +393,7 @@ export function createRecentImageryLayer({
   }
 
   function forgetLease() {
-    _droppedByFallback = false;
     _lease = null;
-    _leaseFromPhotoreal = false;
-    _leaseStackId = null;
-    _leaseGeneration = null;
     _comparisonReady = false;
     _comparisonError = null;
   }
@@ -421,87 +404,36 @@ export function createRecentImageryLayer({
       _comparisonReady = true;
       return;
     }
-    const fromPhotoreal = _mapStackController.getActiveId?.() === 'photoreal';
     let lease;
     try {
       lease = _mapStackController.acquireImageryComparison({
         owner: 'recent-imagery',
-        switchPolicy: 'esri-if-photoreal',
+        switchPolicy: 'preserve',
       });
     } catch {
       _comparisonError = COMPARISON_IN_USE;
       return;
     }
     _lease = lease;
-    _leaseFromPhotoreal = fromPhotoreal;
-    // Read after the lease issued its switch, so that switch is known as ours.
-    _leaseGeneration = _mapStackController.getSwitchGeneration?.() ?? null;
     Promise.resolve(lease.ready)
       .catch(() => null)
       .then((result) => {
         if (_destroyed || _lease !== lease) return;
-        if (result?.status === 'ready') {
-          _comparisonReady = true;
-          _leaseStackId = result.activeId ?? null;
-        } else _comparisonError = COMPARISON_UNAVAILABLE;
+        if (result?.status === 'ready') _comparisonReady = true;
+        else _comparisonError = COMPARISON_UNAVAILABLE;
         if (_enabled) syncRender({ comparison: false });
         notify();
       });
   }
 
   /**
-   * While a day is shown the imagery keeps the Esri surface. A manual switch
-   * (the operator's, not the lease's own) that lands on Google 3D is
-   * answered at once with a new lease under the same policy; the old lease
-   * no longer owns the map, so it lets go without a switch of its own, and
-   * the new one remembers Google 3D for CLEAR. An automatic one (the
-   * controller's fallback or recovery after Esri failed) is not retried: the
-   * lease lets go, restoring nothing, and the days show without a swipe
-   * until the operator switches to Google 3D by hand. Once per switch
-   * generation, never while releasing (CLEAR and disable return to Google
-   * 3D), and never without a lease to renew or one a fallback let go, so a
-   * lease another owner holds stays refused.
-   * @returns {boolean} Whether the lease was renewed, refused or let go.
-   */
-  function keepEsri() {
-    const controller = _mapStackController;
-    if (!_enabled || _destroyed || _releasing) return false;
-    if (!_lease && !_droppedByFallback) return false;
-    if (controller?.getActiveId?.() !== 'photoreal') return false;
-    const shown = plan();
-    if (!shown.a && !shown.b) return false;
-    const generation = controller.getSwitchGeneration?.() ?? null;
-    if (generation === _leaseGeneration || generation === _keptGeneration)
-      return false;
-    _keptGeneration = generation;
-    const automatic = controller.getSwitchOrigin?.() === 'automatic';
-    const previous = _lease;
-    forgetLease();
-    try {
-      void previous?.release();
-    } catch (error) {
-      console.warn('[Data:RecentImagery] comparison release failed:', error);
-    }
-    if (automatic) {
-      _droppedByFallback = true;
-      _comparisonError = COMPARISON_UNAVAILABLE;
-      if (_notice === ESRI_KEPT) _notice = null;
-      return true;
-    }
-    acquireComparison();
-    if (_lease) _notice = ESRI_KEPT;
-    else if (_notice === ESRI_KEPT) _notice = null;
-    return true;
-  }
-
-  /**
    * A settled stack switch (or, without a subscription, the stats poll):
-   * rebind to the new host and keep the Esri surface.
+   * rebind to the new host. The lease is held across switches — every
+   * stack is a globe, so the swipe never needs one to be taken or dropped.
    */
   function followMap() {
     if (_destroyed || !_enabled) return;
-    const moved = syncHost();
-    if (!keepEsri() && !moved) return;
+    if (!syncHost()) return;
     syncRender();
     notify();
   }
@@ -878,10 +810,9 @@ export function createRecentImageryLayer({
     },
 
     /**
-     * Keep the map controller for the Esri lease and hear every settled
-     * stack switch, so the drapes move to the new host the moment it
-     * changes, and a manual switch to Google 3D while a day is shown takes
-     * Esri back, while an automatic fallback lets it go (`keepEsri`).
+     * Keep the map controller for the comparison lease and hear every
+     * settled stack switch, so the drapes move to the new host the moment
+     * it changes. The lease itself is held across switches.
      * @param {object | null} controller
      */
     attachMapStackController(controller) {
@@ -897,7 +828,7 @@ export function createRecentImageryLayer({
       _dataManager = manager || null;
     },
 
-    /** The photoreal tileset, for draping while the globe is hidden. */
+    /** A 3D-tiles overlay, for draping while the globe is hidden. */
     attachTileset(tileset) {
       _tileset = tileset || null;
       if (_enabled && syncHost()) {
@@ -1298,14 +1229,9 @@ export function createRecentImageryLayer({
             swipeGranted() &&
             _hostInfo.kind === 'tileset',
         },
-        // Only while the borrowed map is still the one showing: an operator
-        // who switched back by hand is not told the imagery is on Esri.
-        borrowedEsri:
-          Boolean(_lease) &&
-          _comparisonReady &&
-          _leaseFromPhotoreal &&
-          _leaseStackId !== null &&
-          _mapStackController?.getActiveId?.() === _leaseStackId,
+        // 'preserve' never switches the map for comparison, so the borrowed
+        // Esri note cannot trigger; the field stays for the panel contract.
+        borrowedEsri: false,
         notes: notes(),
         auto: _auto,
         toolActive: _toolActive,

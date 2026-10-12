@@ -41,6 +41,62 @@ export const LOCAL_STEM_TIP_EPSILON_M = 0.5;
 const LOCAL_STEM_TIP_EPSILON_SQ = LOCAL_STEM_TIP_EPSILON_M ** 2;
 
 /**
+ * Format a megawatt capacity for overlay cards ("850 MW", "2.88 GW").
+ * Pure — null/NaN/unknown read as no capacity, never as zero.
+ * @param {number|null|undefined} mw Megawatts.
+ * @returns {string} Display string, or '' when there is no capacity.
+ */
+export function formatCapacityMw(mw) {
+  if (!Number.isFinite(mw) || mw <= 0) return '';
+  if (mw >= 1000) {
+    const gw = mw / 1000;
+    const text = gw >= 10 ? gw.toFixed(1) : gw.toFixed(2);
+    return `${text.replace(/\.?0+$/, '')} GW`;
+  }
+  return `${mw.toLocaleString('en-US', { maximumFractionDigits: 1 })} MW`;
+}
+
+/**
+ * Shorten a "Name, ST, Australia" place label to its head segment for cards.
+ * @param {*} value Raw label.
+ * @returns {string} Head segment, or '' when blank.
+ */
+function shortPlace(value) {
+  const text = String(value ?? '').trim();
+  if (!text) return '';
+  return text.split(',')[0].trim() || text;
+}
+
+/**
+ * Resolve one feature's marker color. Layers without `colorBy` keep the
+ * layer color; a `colorBy` layer reads `mapping` by the feature's property
+ * value (case-insensitive), falling back to `colorBy.fallback`, then the
+ * layer color. Pure — no Cesium types.
+ * @param {object} properties Unwrapped GeoJSON feature properties.
+ * @param {string} color Layer default CSS color.
+ * @param {{property:string, mapping:object, fallback?:string}|null|undefined} colorBy
+ * @returns {string} CSS color for the feature's point, stem and card accent.
+ */
+export function resolveFeatureColor(properties, color, colorBy) {
+  const fallback =
+    typeof color === 'string' && color.trim() ? color : '#ffffff';
+  const mapping = colorBy?.mapping;
+  const property = colorBy?.property;
+  if (!property || !mapping || typeof mapping !== 'object') return fallback;
+  const props = properties && typeof properties === 'object' ? properties : {};
+  const tags = props.tags && typeof props.tags === 'object' ? props.tags : {};
+  const raw = props[property] ?? tags[property];
+  const key = String(raw ?? '')
+    .trim()
+    .toLowerCase();
+  if (!key) return colorBy?.fallback || fallback;
+  for (const [name, css] of Object.entries(mapping)) {
+    if (String(name).toLowerCase() === key) return css;
+  }
+  return colorBy?.fallback || fallback;
+}
+
+/**
  * Build the owner-approved local-infrastructure card copy.
  * @param {object} properties Unwrapped GeoJSON feature properties.
  * @param {string} layerId Local layer id.
@@ -84,9 +140,66 @@ export function localInfrastructureOverlayCopy(properties, layerId) {
     if (river && river.toLocaleLowerCase() !== title.toLocaleLowerCase()) {
       details.push(clampCardLine(river));
     }
+  } else if (layerId === 'local-au-power') {
+    // "Coal · 2.88 GW" + siting context: nearest export port and cable
+    // landing, precomputed over the bundled snapshots at conversion time.
+    const fuel = firstClean([props.fuel, tags['plant:source']]);
+    const fuelLabel = fuel ? fuel.charAt(0).toUpperCase() + fuel.slice(1) : '';
+    const capacity = formatCapacityMw(Number(props.capacityMw));
+    const headline = [fuelLabel, capacity].filter(Boolean).join(' · ');
+    if (headline) details.push(clampCardLine(headline));
+    const portLine = proximityLine(
+      props.nearestPort,
+      props.nearestPortKm,
+      'port',
+    );
+    if (portLine) details.push(clampCardLine(portLine));
+    const landingLine = proximityLine(
+      props.nearestLanding,
+      props.nearestLandingKm,
+      'landing',
+    );
+    if (landingLine) details.push(clampCardLine(landingLine));
+  } else if (layerId === 'local-au-mines') {
+    const line = [firstClean([props.status]), firstClean([props.commodity])]
+      .filter(Boolean)
+      .join(' · ');
+    if (line) details.push(clampCardLine(line));
+    const portLine = proximityLine(
+      props.nearestPort,
+      props.nearestPortKm,
+      'port',
+    );
+    if (portLine) details.push(clampCardLine(portLine));
+    const landingLine = proximityLine(
+      props.nearestLanding,
+      props.nearestLandingKm,
+      'landing',
+    );
+    if (landingLine) details.push(clampCardLine(landingLine));
+  } else if (layerId === 'local-au-ports') {
+    const commodities = firstClean([props.commodities]);
+    if (commodities) details.push(clampCardLine(commodities));
+    const state = firstClean([props.state]);
+    if (state) details.push(clampCardLine(state));
   }
 
   return { title, details };
+}
+
+/**
+ * One siting-context card line ("28.8 km to Newcastle port"). Pure —
+ * anything unparseable reads as no line, never as zero distance.
+ * @param {*} name Place name.
+ * @param {*} km Kilometres.
+ * @param {string} kind Trailing noun ('port' / 'landing').
+ * @returns {string} Card line, or '' when name or distance is unusable.
+ */
+function proximityLine(name, km, kind) {
+  const place = shortPlace(name);
+  const distance = Number(km);
+  if (!place || !Number.isFinite(distance) || distance < 0) return '';
+  return `${distance.toLocaleString('en-US', { maximumFractionDigits: 1 })} km to ${place} ${kind}`;
 }
 
 /**
@@ -98,10 +211,15 @@ export function localInfrastructureOverlayCopy(properties, layerId) {
  * Names are unclamped — overlay cards shorten for paint; queries need the
  * full source string ("Usina Hidrelétrica de Itaipu").
  * @param {Object|null|undefined} raw - {id, lat, lon, properties}.
- * @param {string} [layerId] Local layer id (`local-datacenters` / `local-dams`).
+ * @param {string} [layerId] Local layer id (`local-datacenters` / `local-dams` /
+ *   `local-au-power` / `local-au-mines` / `local-au-ports`).
  * @returns {{id: string, name: string|null, lat: number|null, lon: number|null,
  *   operator: string|null, capacity: string|null, river: string|null,
- *   output: string|null}}
+ *   output: string|null, fuel: string|null, capacityMw: number|null,
+ *   status: string|null, commodity: string|null, commodityGroup: string|null,
+ *   commodities: string|null, state: string|null, nearestPort: string|null,
+ *   nearestPortKm: number|null, nearestLanding: string|null,
+ *   nearestLandingKm: number|null}}
  */
 export function mapAnalystRecord(raw, layerId = '') {
   const num = (v) => (Number.isFinite(v) ? v : null);
@@ -149,6 +267,9 @@ export function mapAnalystRecord(raw, layerId = '') {
     layerId === 'local-dams'
       ? text(props.output) || text(tags['plant:output:electricity'])
       : null;
+  const isPower = layerId === 'local-au-power';
+  const isMine = layerId === 'local-au-mines';
+  const isPort = layerId === 'local-au-ports';
   return {
     id: name || text(raw?.id) || layerTitle(layerId),
     name,
@@ -158,6 +279,18 @@ export function mapAnalystRecord(raw, layerId = '') {
     capacity,
     river,
     output,
+    fuel: isPower ? text(props.fuel) || text(tags['plant:source']) : null,
+    capacityMw: isPower ? num(Number(props.capacityMw)) : null,
+    status: isMine ? text(props.status) : null,
+    commodity: isMine ? text(props.commodity) : null,
+    commodityGroup: isMine ? text(props.commodityGroup) : null,
+    commodities: isPort ? text(props.commodities) : null,
+    state: isMine || isPort ? text(props.state) : null,
+    nearestPort: isPower || isMine ? text(props.nearestPort) : null,
+    nearestPortKm: isPower || isMine ? num(Number(props.nearestPortKm)) : null,
+    nearestLanding: isPower || isMine ? text(props.nearestLanding) : null,
+    nearestLandingKm:
+      isPower || isMine ? num(Number(props.nearestLandingKm)) : null,
   };
 }
 
@@ -392,6 +525,11 @@ export function createLocalGeoJsonLayer(
     url,
     name,
     color,
+    // Optional per-feature colors: { property, mapping, fallback }. The
+    // marker point, stem and card accent read the feature's property value
+    // through the mapping (see resolveFeatureColor); polygon fill/outline
+    // keep the layer color.
+    colorBy = null,
     icon = '📍',
     source = 'Local JSONL',
     labels = true,
@@ -656,6 +794,10 @@ export function createLocalGeoJsonLayer(
           _loadPromise = (async () => {
             _loadController = new AbortController();
             const baseColor = Cesium.Color.fromCssColorString(color);
+            // Parsed per-feature colors, keyed by CSS string. One entry per
+            // distinct colorBy value — a bad mapping entry degrades to the
+            // layer color instead of failing the whole load.
+            const featureColorCache = new Map([[color, baseColor]]);
 
             // Fetch and parse JSON Lines (.geojsonl) into a FeatureCollection.
             // The source is built into a local and committed to `_dataSource`
@@ -773,6 +915,20 @@ export function createLocalGeoJsonLayer(
                 );
                 const properties = propertyObject(feature);
                 const recordId = String(feature.id ?? i);
+                const featureCss = resolveFeatureColor(
+                  properties,
+                  color,
+                  colorBy,
+                );
+                let featureColor = featureColorCache.get(featureCss);
+                if (!featureColor) {
+                  try {
+                    featureColor = Cesium.Color.fromCssColorString(featureCss);
+                  } catch {
+                    featureColor = baseColor;
+                  }
+                  featureColorCache.set(featureCss, featureColor);
+                }
 
                 // Store references for bounded stem scaling and native picking.
                 feature.__localBaseCarto = carto;
@@ -804,11 +960,11 @@ export function createLocalGeoJsonLayer(
                 feature.polyline = new Cesium.PolylineGraphics({
                   positions: stemPositionBuffers[0],
                   width: 3.5,
-                  material: new Cesium.ColorMaterialProperty(baseColor),
+                  material: new Cesium.ColorMaterialProperty(featureColor),
                 });
                 feature.point = new Cesium.PointGraphics({
                   pixelSize: 10,
-                  color: baseColor,
+                  color: featureColor,
                   outlineColor: Cesium.Color.BLACK,
                   outlineWidth: 2,
                   // Never depth-cull the anchor against the photoreal mesh —
@@ -837,7 +993,7 @@ export function createLocalGeoJsonLayer(
                         position: tip,
                         properties,
                         priority,
-                        accent: color,
+                        accent: featureCss,
                       })
                     : null,
                 });
@@ -1313,6 +1469,9 @@ function featureLabelFromProperties(props, layerId) {
     tags.operator,
     tags['operator:short'],
     props.operator,
+    props.fuel && layerId === 'local-au-power'
+      ? `${String(props.fuel).charAt(0).toUpperCase()}${String(props.fuel).slice(1)} plant`
+      : '',
     props.output ? `${layerTitle(layerId)} ${props.output}` : '',
     props.osm_id ? `${layerTitle(layerId)} ${props.osm_id}` : '',
   ];
@@ -1329,8 +1488,12 @@ function labelPriorityFromProperties(props, layerId) {
   if (cleanLabel(tags['name:en'])) score += 700;
   if (cleanLabel(tags.operator) || cleanLabel(props.operator)) score += 180;
   if (props.output || tags['plant:output:electricity']) score += 120;
+  if (Number(props.capacityMw) > 0) score += 150;
   if (layerId === 'local-dams') score += 80;
   if (layerId === 'local-datacenters') score += 60;
+  if (layerId === 'local-au-power') score += 70;
+  if (layerId === 'local-au-mines') score += 50;
+  if (layerId === 'local-au-ports') score += 90;
   return score;
 }
 
@@ -1379,5 +1542,8 @@ function clampCardLine(value) {
 function layerTitle(layerId) {
   if (layerId === 'local-datacenters') return 'Datacenter';
   if (layerId === 'local-dams') return 'Dam';
+  if (layerId === 'local-au-power') return 'Power Station';
+  if (layerId === 'local-au-mines') return 'Mine';
+  if (layerId === 'local-au-ports') return 'Port';
   return 'Feature';
 }

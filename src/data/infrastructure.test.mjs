@@ -63,6 +63,21 @@ test('infrastructure factory preserves identity and creates independent state wi
     [
       { id: 'local-datacenters', name: 'Datacenters', source: 'Local' },
       { id: 'local-dams', name: 'Dams', source: 'USACE' },
+      {
+        id: 'local-au-ports',
+        name: 'Australian Ports',
+        source: 'Geoscience Australia',
+      },
+      {
+        id: 'local-au-mines',
+        name: 'Australian Mines',
+        source: 'Geoscience Australia',
+      },
+      {
+        id: 'local-au-power',
+        name: 'Australian Power Stations',
+        source: 'OpenStreetMap',
+      },
     ],
   );
   first.forEach((layer, index) => {
@@ -78,12 +93,15 @@ test('infrastructure factory preserves identity and creates independent state wi
 });
 
 test('dataset URLs still name the complete bundled sources', () => {
-  for (const [file, count] of [
-    ['datacenters', 4351],
-    ['dams', 704],
+  for (const [dir, file, count] of [
+    ['datacenters', 'datacenters', 4351],
+    ['dams', 'dams', 704],
+    ['au_ports', 'ports', 75],
+    ['au_mines', 'mines', 539],
+    ['au_power', 'plants', 848],
   ]) {
     const lines = readFileSync(
-      new URL(`./local_data/${file}/${file}.geojsonl`, import.meta.url),
+      new URL(`./local_data/${dir}/${file}.geojsonl`, import.meta.url),
       'utf8',
     )
       .split('\n')
@@ -192,7 +210,7 @@ test('consumer build includes only infrastructure code and resolves assets under
     ['cesium'],
     'the viewer supplies the same Cesium dependency',
   );
-  for (const name of ['datacenters', 'dams']) {
+  for (const name of ['datacenters', 'dams', 'ports', 'mines', 'plants']) {
     const asset = output.find(
       (item) => item.type === 'asset' && item.fileName.includes(name),
     );

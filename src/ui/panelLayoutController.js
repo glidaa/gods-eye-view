@@ -29,6 +29,7 @@ const LEFT_STACK_OBSTACLE_SELECTOR = [
   '#location-bar',
   '#control-panel',
   '#gev-voice-control',
+  '#gev-chat-dock',
   '#pp-toggles',
   '#param-slider-panel',
 ].join(', ');
@@ -59,6 +60,7 @@ const RIGHT_STACK_OBSTACLE_SELECTOR = [
   '#cesium-credits .cesium-credit-textContainer',
   '#command-dock',
   '#gev-voice-control',
+  '#gev-chat-dock',
 ].join(', ');
 export class PanelLayoutController {
   constructor({
@@ -93,6 +95,7 @@ export class PanelLayoutController {
     this._leftPanelStack = document.getElementById('left-panel-stack');
     this._rightPanelStack = document.getElementById('right-context-rail');
     this._ppToggles = document.getElementById('pp-toggles');
+    this._controlPanel = document.getElementById('control-panel');
     this._cctvPanel = document.getElementById('cctv-panel');
     this._weatherPanel = document.getElementById('weather-panel');
     this._recentImageryPanel = document.getElementById('recent-imagery-panel');
@@ -196,7 +199,11 @@ export class PanelLayoutController {
     this._ppToggles.querySelector('.pp-header-row')?.removeAttribute('title');
     stack.prepend(this._ppToggles);
     const globalContextPanel = document.getElementById('global-context-panel');
+    // The visual presets tray docks in the right rail directly under
+    // DISPLAY: each insert lands before CONTEXT, so first in this list ends
+    // up first after the prepended DISPLAY panel.
     for (const panel of [
+      this._controlPanel,
       this._cctvPanel,
       this._weatherPanel,
       this._recentImageryPanel,
@@ -225,6 +232,7 @@ export class PanelLayoutController {
       this._rightStackResizeObserver.observe(stack);
       for (const panel of [
         this._ppToggles,
+        this._controlPanel,
         this._cctvPanel,
         this._weatherPanel,
         this._recentImageryPanel,

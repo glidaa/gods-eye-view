@@ -9,14 +9,12 @@ export const nepalScenePresentation = {
       ? INCIDENT_OVERVIEW_HOLD_SEC
       : 0;
   },
-  resolveVisual(shot, visual, isMapStackAvailable) {
+  resolveVisual(shot, visual) {
     const isNepalShot =
       shot?.layers?.['bhote-koshi-2026']?.enabled ||
       shot?.layers?.['bhote-koshi-locator']?.enabled;
-    // A credential is not proof of a loaded tileset. Resolve actual capability at playback time.
-    return isNepalShot &&
-      visual.mapStack === 'photoreal' &&
-      !isMapStackAvailable('photoreal')
+    // The photoreal stack is gone; migrate legacy shots to Esri at playback.
+    return isNepalShot && visual.mapStack === 'photoreal'
       ? { ...visual, mapStack: 'esri-imagery' }
       : visual;
   },

@@ -19,7 +19,7 @@ const BHOTE_KOSHI_NEPAL_BASE_RECIPE = Object.freeze({
     bloom: 0,
     sharpen: true,
     detectionMode: 'OFF',
-    mapStack: 'photoreal',
+    mapStack: 'esri-imagery',
   },
   legacySceneBootstrap: {
     targetSceneTitle: 'Nepal Flood Incident',
@@ -222,7 +222,7 @@ const BHOTE_KOSHI_NEPAL_BASE_RECIPE = Object.freeze({
   shotPatches: [
     {
       title: 'Global Incident Context',
-      visual: { mapStack: 'photoreal' },
+      visual: { mapStack: 'esri-imagery' },
       layers: {
         'bhote-koshi-2026': {
           enabled: true,
@@ -237,7 +237,7 @@ const BHOTE_KOSHI_NEPAL_BASE_RECIPE = Object.freeze({
     },
     {
       title: 'Nepal-Focused Globe Rotation',
-      visual: { mapStack: 'photoreal' },
+      visual: { mapStack: 'esri-imagery' },
       layers: {
         'bhote-koshi-2026': {
           enabled: true,
@@ -252,7 +252,7 @@ const BHOTE_KOSHI_NEPAL_BASE_RECIPE = Object.freeze({
     },
     {
       title: 'Bhote Koshi Regional Approach',
-      visual: { mapStack: 'photoreal' },
+      visual: { mapStack: 'esri-imagery' },
       layers: {
         'bhote-koshi-2026': {
           enabled: true,
@@ -267,7 +267,7 @@ const BHOTE_KOSHI_NEPAL_BASE_RECIPE = Object.freeze({
     },
     {
       title: 'Bhote Koshi Nearby Cities',
-      visual: { mapStack: 'photoreal' },
+      visual: { mapStack: 'esri-imagery' },
       layers: {
         'bhote-koshi-2026': {
           enabled: true,
@@ -291,7 +291,7 @@ const BHOTE_KOSHI_NEPAL_BASE_RECIPE = Object.freeze({
         roll: 0,
       },
       holdSec: 11,
-      visual: { mapStack: 'photoreal' },
+      visual: { mapStack: 'esri-imagery' },
       layers: {
         'bhote-koshi-2026': {
           enabled: true,
@@ -306,7 +306,7 @@ const BHOTE_KOSHI_NEPAL_BASE_RECIPE = Object.freeze({
     },
     {
       title: 'Bhote Koshi Flood Path',
-      visual: { mapStack: 'photoreal' },
+      visual: { mapStack: 'esri-imagery' },
       layers: {
         'bhote-koshi-2026': {
           enabled: true,
@@ -321,7 +321,7 @@ const BHOTE_KOSHI_NEPAL_BASE_RECIPE = Object.freeze({
     },
     {
       title: 'Bhote Koshi Corridor Overview',
-      visual: { mapStack: 'photoreal' },
+      visual: { mapStack: 'esri-imagery' },
       layers: {
         'bhote-koshi-2026': {
           enabled: true,
@@ -337,7 +337,7 @@ const BHOTE_KOSHI_NEPAL_BASE_RECIPE = Object.freeze({
     {
       title: 'Bhote Koshi Upper Valley',
       holdSec: 8,
-      visual: { mapStack: 'photoreal' },
+      visual: { mapStack: 'esri-imagery' },
       layers: {
         'bhote-koshi-2026': {
           enabled: true,
@@ -381,19 +381,19 @@ const BHOTE_KOSHI_NEPAL_BASE_RECIPE = Object.freeze({
     },
     {
       title: 'Nepal-China Border Gate',
-      visual: { mapStack: 'photoreal' },
+      visual: { mapStack: 'esri-imagery' },
     },
     {
       title: 'Timure Evidence Cluster',
-      visual: { mapStack: 'photoreal' },
+      visual: { mapStack: 'esri-imagery' },
     },
     {
       title: 'Syabru Besi Passage',
-      visual: { mapStack: 'photoreal' },
+      visual: { mapStack: 'esri-imagery' },
     },
     {
       title: 'Bidur / Trishuli Consequence',
-      visual: { mapStack: 'photoreal' },
+      visual: { mapStack: 'esri-imagery' },
     },
   ],
   cameraPath: [
@@ -445,7 +445,7 @@ const BHOTE_KOSHI_NEPAL_BASE_RECIPE = Object.freeze({
     },
     {
       title: 'Nepal-China Border Gate',
-      mapStack: 'photoreal',
+      mapStack: 'esri-imagery',
       lat: 28.316789,
       lon: 85.399734,
       alt: 5900,
@@ -475,7 +475,7 @@ const BHOTE_KOSHI_NEPAL_BASE_RECIPE = Object.freeze({
     },
     {
       title: 'Timure Evidence Cluster',
-      mapStack: 'photoreal',
+      mapStack: 'esri-imagery',
       lat: 28.285968,
       lon: 85.379136,
       alt: 5032,
@@ -503,7 +503,7 @@ const BHOTE_KOSHI_NEPAL_BASE_RECIPE = Object.freeze({
     },
     {
       title: 'Syabru Besi Passage',
-      mapStack: 'photoreal',
+      mapStack: 'esri-imagery',
       lat: 28.210306,
       lon: 85.361527,
       alt: 5893,
@@ -531,7 +531,7 @@ const BHOTE_KOSHI_NEPAL_BASE_RECIPE = Object.freeze({
     },
     {
       title: 'Bidur / Trishuli Consequence',
-      mapStack: 'photoreal',
+      mapStack: 'esri-imagery',
       lat: 27.981737,
       lon: 85.196273,
       alt: 7422,

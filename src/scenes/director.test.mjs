@@ -225,7 +225,7 @@ test('the Nepal evidence pack appends once and applies the approved corridor fra
     assert.deepEqual(
       scene.shots.map((shot) => shot.visual.mapStack),
       [
-        ...Array(25).fill('photoreal'),
+        ...Array(25).fill('esri-imagery'),
       ],
     );
     assert.deepEqual(
@@ -532,30 +532,24 @@ test('Nepal comparison shots load Esri beneath Vantor even from a saved OSM or p
 });
 
 test('all saved Nepal shots choose a usable map in keyed and keyless runtimes without rewriting the project', async () => {
-  let photorealAvailable = false;
   const { director, styleManager, restore } = makeDirector({
     project: nepalProjectFixture(),
-    isMapStackAvailable: (id) => id === 'photoreal' && photorealAvailable,
+    isMapStackAvailable: () => true,
     data: { registered: [...REGISTERED, 'bhote-koshi-2026', 'bhote-koshi-locator'] },
   });
   try {
     director.appendShotPack('scene-1', 'bhote-koshi-nepal-evidence-pack');
     const scene = director._project.scenes[0];
     const savedShots = structuredClone(scene.shots);
-    for (const available of [false, true, false]) {
-      photorealAvailable = available;
-      for (const shot of scene.shots) {
-        const comparison = director._layerStatesForShot(scene, shot)
-          ['bhote-koshi-2026']?.params?.sceneControls?.imageryComparison;
-        const visual = director._visualStateForShot(shot);
-        assert.equal(visual.mapStack, available && !comparison ? 'photoreal' : 'esri-imagery', shot.title);
-      }
-      await director.loadShot(scene.id, scene.shots[0].id, { flyDuration: 0.2 });
-      assert.equal(styleManager.visualStates.at(-1).mapStack, available ? 'photoreal' : 'esri-imagery');
+    for (const shot of scene.shots) {
+      const visual = director._visualStateForShot(shot);
+      assert.equal(visual.mapStack, 'esri-imagery', shot.title);
     }
+    await director.loadShot(scene.id, scene.shots[0].id, { flyDuration: 0.2 });
+    assert.equal(styleManager.visualStates.at(-1).mapStack, 'esri-imagery');
     assert.deepEqual(scene.shots, savedShots);
-    const unrelated = { visual: { mapStack: 'photoreal' }, layers: { flights: { enabled: true } } };
-    assert.equal(director._visualStateForShot(unrelated), unrelated.visual, 'other scenes keep their provider policy');
+    const legacy = { visual: { mapStack: 'photoreal' }, layers: { flights: { enabled: true } } };
+    assert.equal(director._visualStateForShot(legacy), legacy.visual, 'visual state passes through; the controller falls back retired IDs');
   } finally {
     await director.destroy();
     restore();

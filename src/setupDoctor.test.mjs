@@ -115,16 +115,16 @@ test('Pinokio-scoped diagnosis ignores Keychain items its start path does not im
 test('Pinokio-scoped diagnosis does not count dotenv values shadowed by blank app fields', () => {
   const root = mkdtempSync(path.join(tmpdir(), 'gev-pinokio-doctor-env-'));
   try {
-    const spec = credential('GOOGLE_MAPS_API_KEY');
-    writeFileSync(path.join(root, '.env.local'), 'GOOGLE_MAPS_API_KEY=dotenv-only\n');
+    const spec = credential('CESIUM_ION_TOKEN');
+    writeFileSync(path.join(root, '.env.local'), 'CESIUM_ION_TOKEN=dotenv-only\n');
     assert.deepEqual(resolveCredential(spec, {
-      environment: { GOOGLE_MAPS_API_KEY: '' },
+      environment: { CESIUM_ION_TOKEN: '' },
       rootDir: root,
       keychainLookup: () => false,
     }), { configured: true, source: 'dotenv files' });
     assert.deepEqual(resolveCredential(spec, {
       authoritativeEnvironment: true,
-      environment: { GOOGLE_MAPS_API_KEY: '' },
+      environment: { CESIUM_ION_TOKEN: '' },
       rootDir: root,
       keychainLookup: () => false,
     }), { configured: false, source: null });
@@ -221,8 +221,8 @@ test('doctor describes the credential ladder without exposing values', () => {
     LL2_API_TOKEN: { configured: true, source: 'environment' },
   };
   const capabilities = buildCapabilitySummary(credentials);
-  assert.match(capabilities.map, /Google Photorealistic 3D Tiles through Cesium ion/);
-  assert.match(capabilities.map, /Bing and world-terrain stacks/);
+  assert.match(capabilities.map, /Esri World Imagery \+ Bing stacks/);
+  assert.match(capabilities.map, /Cesium world terrain/);
   assert.equal(capabilities.voice, 'available');
   assert.match(capabilities.missions, /token allowance/);
   assert.equal(capabilities.flights, 'OpenSky keyless anonymous access (rate-limited)');

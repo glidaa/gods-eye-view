@@ -381,7 +381,7 @@ test('the launcher yields on engage and waits when a surface is already up', () 
 // ── Per-mission behavior ─────────────────────────────────────────────────────
 
 function missionSpy({ contextOk = true, layerResult = () => true, globe = async () => ({ ok: true }) } = {}) {
-  const calls = { contextModes: [], layerIds: [], globeFlights: 0 };
+  const calls = { contextModes: [], layerIds: [], globeFlights: 0, viewFlights: [] };
   return {
     calls,
     deps: {
@@ -395,6 +395,10 @@ function missionSpy({ contextOk = true, layerResult = () => true, globe = async 
       },
       flyToGlobe: async () => {
         calls.globeFlights += 1;
+        return globe();
+      },
+      flyToView: async (view) => {
+        calls.viewFlights.push(view);
         return globe();
       },
     },
@@ -426,19 +430,49 @@ test('Live Contacts and Space Missions go through the one setContextMode facade'
   }
 });
 
-test('Environmental enables BOTH its feeds and pulls out to the globe', async () => {
+test('Environmental enables its full NSW set and frames New South Wales', async () => {
   const spy = missionSpy();
   const outcome = await runFirstRunChoice('environmental', spy.deps);
   assert.equal(outcome.ok, true);
-  assert.deepEqual(spy.calls.layerIds, ['earthquakes', 'local-firms']);
-  assert.equal(spy.calls.globeFlights, 1);
+  assert.deepEqual(spy.calls.layerIds, [
+    'earthquakes',
+    'local-firms',
+    'local-au-ports',
+    'local-au-mines',
+    'local-au-power',
+    'aus-energy-grid',
+    'nem-generation',
+  ]);
+  // A mission WITH a view frames the region — the globe pull-out is the
+  // fallback for missions without one, not a second flight.
+  assert.equal(spy.calls.globeFlights, 0);
+  assert.deepEqual(spy.calls.viewFlights, [{ lat: -32.5, lon: 147.0, alt: 1700000 }]);
 });
 
-test('the tile is the FULLY CONFIGURED experience: quakes and fires together', () => {
+test('a mission view falls back to the globe when no view flight is wired', async () => {
+  const spy = missionSpy();
+  const { flyToView, ...deps } = spy.deps;
+  assert.equal(typeof flyToView, 'function');
+  const outcome = await runFirstRunChoice('environmental', deps);
+  assert.equal(outcome.ok, true);
+  assert.equal(spy.calls.globeFlights, 1);
+  assert.deepEqual(spy.calls.viewFlights, []);
+});
+
+test('the tile is the FULLY CONFIGURED experience: NSW energy and events together', () => {
   // Owner ruling, 2026-08-23: the launcher optimizes for the configured app, so
-  // ENVIRONMENTAL means live USGS earthquakes AND NASA FIRMS active fires.
+  // ENVIRONMENTAL means the Australia energy layers plus live USGS
+  // earthquakes AND NASA FIRMS active fires.
   const environmental = FIRST_RUN_MISSIONS.environmental;
-  assert.deepEqual(environmental.layerIds, ['earthquakes', 'local-firms']);
+  assert.deepEqual(environmental.layerIds, [
+    'earthquakes',
+    'local-firms',
+    'local-au-ports',
+    'local-au-mines',
+    'local-au-power',
+    'aus-energy-grid',
+    'nem-generation',
+  ]);
 
   // Keyless, the honest surface is the LAYER ROW ("KEY REQUIRED"), which the
   // FIRMS layer already reports. The misleading part is the GLOBAL chip folding
@@ -460,7 +494,15 @@ test('every visitor gets the same tile — there is no degraded keyless variant'
   const outcome = await runFirstRunChoice('environmental', spy.deps);
   assert.equal(outcome.ok, true);
   assert.deepEqual(outcome.failedLayerIds, []);
-  assert.deepEqual(spy.calls.layerIds, ['earthquakes', 'local-firms']);
+  assert.deepEqual(spy.calls.layerIds, [
+    'earthquakes',
+    'local-firms',
+    'local-au-ports',
+    'local-au-mines',
+    'local-au-power',
+    'aus-energy-grid',
+    'nem-generation',
+  ]);
   const module = fs.readFileSync(new URL('./firstRunExperience.js', import.meta.url), 'utf8');
   assert.doesNotMatch(
     module.slice(module.indexOf('export async function runFirstRunChoice')),
@@ -480,12 +522,54 @@ test('a refused layer fails the mission by name, and a stalled flight never does
   assert.equal((await runFirstRunChoice('environmental', flightDown.deps)).ok, true);
 });
 
+test('a refused OPTIONAL layer still lets the tile complete', async () => {
+  // Keyless FIRMS refuses every launch; the tile asks for it (the subcopy
+  // promises fires) but must not strand the visitor on a retry that can
+  // never succeed. The failure stays named — only the verdict is forgiving.
+  const keyless = missionSpy({ layerResult: (id) => id !== 'local-firms' });
+  const outcome = await runFirstRunChoice('environmental', keyless.deps);
+  assert.equal(outcome.ok, true);
+  assert.deepEqual(outcome.failedLayerIds, ['local-firms']);
+});
+
+test('a stalled OPTIONAL layer never stalls the tile', async () => {
+  // Cold FIRMS can take ~19 s; the tile completes on the optional budget
+  // while the real enable keeps running underneath.
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  const spy = missionSpy({
+    layerResult: (id) => (id === 'local-firms' ? gate.then(() => true) : true),
+  });
+  const outcome = await runFirstRunChoice('environmental', {
+    ...spy.deps,
+    optionalTimeoutMs: 20,
+  });
+  assert.equal(outcome.ok, true);
+  assert.deepEqual(outcome.failedLayerIds, ['local-firms']);
+  release();
+});
+
+test('the tile narrates layer progress as layers settle', async () => {
+  const spy = missionSpy();
+  const seen = [];
+  const outcome = await runFirstRunChoice('environmental', {
+    ...spy.deps,
+    onProgress: (done, total) => seen.push([done, total]),
+  });
+  assert.equal(outcome.ok, true);
+  assert.deepEqual(seen.map(([, total]) => total), [7, 7, 7, 7, 7, 7, 7]);
+  assert.deepEqual(
+    seen.map(([done]) => done).sort((a, b) => a - b),
+    [1, 2, 3, 4, 5, 6, 7],
+  );
+});
+
 test('Explore manually touches nothing at all, and an unknown choice is inert', async () => {
   const spy = missionSpy();
   assert.equal((await runFirstRunChoice('explore', spy.deps)).ok, true);
-  assert.deepEqual(spy.calls, { contextModes: [], layerIds: [], globeFlights: 0 });
+  assert.deepEqual(spy.calls, { contextModes: [], layerIds: [], globeFlights: 0, viewFlights: [] });
   assert.equal((await runFirstRunChoice('nope', spy.deps)).ok, false);
-  assert.deepEqual(spy.calls, { contextModes: [], layerIds: [], globeFlights: 0 });
+  assert.deepEqual(spy.calls, { contextModes: [], layerIds: [], globeFlights: 0, viewFlights: [] });
 });
 
 test('a failed Context mission reports the layers the facade named', async () => {
@@ -560,11 +644,15 @@ test('markup, startup ordering and accessibility remain pinned', () => {
   assert.match(html, /data-first-run-status[^>]*role="status"[^>]*aria-live="polite"/);
   assert.match(html, /<input type="checkbox" data-first-run-suppress \/>/);
   assert.match(html, /<strong data-first-run-environmental-title>/);
-  // Subcopy must name BOTH feeds the tile turns on — a tile that promised only
-  // half of what it does is the defect this replaced. Only the VISIBLE <small>
-  // text counts; the comment beside it naturally says the words too.
+  // Subcopy must name the full set the tile turns on — a tile that promised
+  // only half of what it does is the defect this replaced. Only the VISIBLE
+  // <small> text counts; the comment beside it naturally says the words too.
   const envTile = html.slice(html.indexOf('data-first-run-choice="environmental"'));
   const visible = envTile.slice(envTile.indexOf('<small>'), envTile.indexOf('</small>'));
+  assert.match(visible, /NSW/i);
+  assert.match(visible, /power/i);
+  assert.match(visible, /ports/i);
+  assert.match(visible, /mines/i);
   assert.match(visible, /earthquakes/i);
   assert.match(visible, /fires?/i, 'the tile must promise the fires it enables');
 
@@ -662,10 +750,10 @@ test('the voice TOOL SCHEMA matches the pinned release — the mission mapping i
   // ordering while allowing source formatting. Derived from the unchanged
   // release schema before formatting (the previous source-byte pin passed).
   const block = JSON.stringify(GEV_REALTIME_TOOLS);
-  assert.equal(block.length, 27271, 'serialized tool schema length drifted');
+  assert.equal(block.length, 27845, 'serialized tool schema length drifted');
   assert.equal(
     crypto.createHash('sha256').update(block).digest('hex'),
-    'da5f1bb334d1e882d63098cb35b29afde273947c0807ef6af2ef3d25a0df4918',
+    '8ffc8945b5d307b28015f2154f8059bacaae8a40d6c087a8ccad1a2ac346276f',
     'the first-run missions must ride EXISTING tools: no schema edit, no cache bust',
   );
   const instructions = fs.readFileSync(new URL('../server/providers/openai/instructions.js', import.meta.url), 'utf8');

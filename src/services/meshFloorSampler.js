@@ -51,11 +51,11 @@ export function createMeshFloorSampler({
   /** @type {Cesium.Cartographic} Scratch for probe coordinates. */
   const _scratchProbe = new Cesium.Cartographic();
 
-  // Regime tracking: mesh cells only apply while the photoreal (google-3d)
+  // Regime tracking: mesh cells only apply while a photoreal (google-3d)
   // stack renders. main.js re-dispatches MapStackController.onChange as this
-  // CustomEvent; the boot default is photoreal, matching groundFloor's initial
-  // preference. Module-scope listener: the module only loads in the browser
-  // bundle, and the subscription is idempotent for the app's lifetime.
+  // CustomEvent; the boot default is no mesh regime, matching groundFloor's
+  // initial preference. Module-scope listener: the module only loads in the
+  // browser bundle, and the subscription is idempotent for the app's lifetime.
 
   /**
    * True when a VISIBLE 3D tileset in the scene reports its streaming queue

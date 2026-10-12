@@ -59,7 +59,7 @@ const SFO_ELLIPSOIDAL_M = -15;
  */
 function installHudEnvironment() {
   const elements = new Map(
-    ['hud-alt', 'hud-summary', 'hud-mgrs', 'hud-latlon', 'hud-bottom-line', 'hud-gsd', 'hud-coll', 'hud-ona', 'hud-mode']
+    ['hud-alt', 'hud-summary', 'hud-mgrs', 'hud-latlon', 'hud-bottom-line', 'hud-gsd', 'hud-coll', 'hud-ona', 'hud-mode', 'hud-viewing']
       .map((id) => [id, { textContent: '' }]),
   );
   const previousDocument = globalThis.document;
@@ -215,6 +215,21 @@ test('a cold tick paints both readouts uncorrected, and resolving flips both in 
       summaryRevisionAfterFlip,
       'a settled geoid must not re-dirty the summary on every telemetry tick',
     );
+  } finally {
+    hud?.destroy();
+    env.restore();
+  }
+});
+
+test('the top-right viewing line names the place and region beside the geo readout', () => {
+  const env = installHudEnvironment();
+  let hud;
+  try {
+    hud = new IntelHUD(env.viewer);
+    hud._updateCameraData();
+    const viewing = env.elements.get('hud-viewing').textContent;
+    assert.match(viewing, /^VIEWING: /, `the viewing line leads, got ${viewing}`);
+    assert.match(viewing, /NORTH AMERICA/, `SFO sits in North America, got ${viewing}`);
   } finally {
     hud?.destroy();
     env.restore();

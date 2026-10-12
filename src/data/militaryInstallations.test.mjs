@@ -101,7 +101,7 @@ test('keeps generic Places hits distinct from explicitly typed military faciliti
 });
 
 test('reports the record source instead of attributing Places records to OpenStreetMap', () => {
-  assert.equal(installationSourceLabel({ sources: [{ name: 'Google Maps Places' }] }), 'Google Maps Places');
+  assert.equal(installationSourceLabel({ sources: [{ name: 'Places' }] }), 'Places');
   assert.equal(installationSourceLabel({ sources: [{ name: 'OpenStreetMap' }, { name: 'OpenStreetMap' }] }), 'OpenStreetMap');
 });
 

@@ -394,25 +394,26 @@ test('outline upgrade updates the rendered element in place without remove/add',
   globalThis.requestAnimationFrame = () => 1;
   globalThis.cancelAnimationFrame = () => {};
   globalThis.window = {
-    __GOOGLE_MAPS_API_KEY__: 'unit-test-key',
     setTimeout: globalThis.setTimeout,
     clearTimeout: globalThis.clearTimeout,
   };
   let overpassCall = 0;
   globalThis.fetch = async (url) => {
-    if (String(url).startsWith('https://maps.googleapis.com/')) {
-      return { json: async () => ({
-        status: 'OK',
-        results: [{
-          formatted_address: 'FB-3 Engine Texas Fixture',
-          types: ['administrative_area_level_1', 'political'],
-          address_components: [{
-            long_name: 'FB-3 Engine Texas Fixture',
-            types: ['administrative_area_level_1', 'political'],
+    if (String(url).startsWith('https://photon.komoot.io/')) {
+      return {
+        ok: true,
+        json: async () => ({
+          features: [{
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: [-99, 31] },
+            properties: {
+              name: 'FB-3 Engine Texas Fixture',
+              type: 'state',
+              country: 'United States',
+            },
           }],
-          geometry: { location: { lat: 31, lng: -99 } },
-        }],
-      }) };
+        }),
+      };
     }
     assert.equal(String(url), '/api/overpass');
     overpassCall += 1;

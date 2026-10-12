@@ -14,7 +14,6 @@ import { keySetupRequirement } from './keySetupCore.mjs';
 
 export const MAP_STACK_CHIP_CLASS = 'map-stack-chip';
 export const PRESENTED_MAP_STACK_IDS = Object.freeze([
-  'photoreal',
   'bing-aerial',
   'bing-labels',
   'esri-imagery',
@@ -24,9 +23,9 @@ export const PRESENTED_MAP_STACK_IDS = Object.freeze([
 /**
  * Presentation model for one map-stack chip.
  *
- * Unavailable is NOT the same as needs-an-ion-token: `photoreal` is unavailable
- * whenever the Google tileset failed to load (the startup fallback-to-OSM
- * case), and a future stack may have its own reason. The ION badge is therefore
+ * Unavailable is NOT the same as needs-an-ion-token: a stack is unavailable
+ * whenever its own load failed (the Esri→OSM construction-fallback case),
+ * and a future stack may have its own reason. The ION badge is therefore
  * gated on the stack's own `requiresIon` flag, and the tooltip quotes the
  * controller's `unavailableReason` rather than assuming one.
  * @param {{id: string, label: string, available?: boolean, requiresIon?: boolean, unavailableReason?: string|null}} stack - Stack descriptor from `getStacks()`.

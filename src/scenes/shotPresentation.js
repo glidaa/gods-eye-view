@@ -111,7 +111,7 @@ export function visualStateForShot(shot, packs, isMapStackAvailable) {
   const visual = sourceRecipe?.photorealSurfaceBeatIds?.includes(
     sceneBeatState?.params?.beatId,
   )
-    ? { ...(shot.visual || {}), mapStack: 'photoreal' }
+    ? { ...(shot.visual || {}), mapStack: 'esri-imagery' }
     : shot?.visual || {};
   return packs.resolveVisual(shot, visual, isMapStackAvailable);
 }

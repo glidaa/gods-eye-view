@@ -77,6 +77,41 @@ export const ANALYST_LAYERS = {
     text: ['name', 'operator', 'river', 'output'],
     flags: [],
   },
+  'local-au-power': {
+    numeric: ['capacityMw', 'nearestPortKm', 'nearestLandingKm'],
+    text: [
+      'name',
+      'fuel',
+      'operator',
+      'output',
+      'nearestPort',
+      'nearestLanding',
+    ],
+    flags: [],
+  },
+  'local-au-mines': {
+    numeric: ['nearestPortKm', 'nearestLandingKm'],
+    text: [
+      'name',
+      'state',
+      'status',
+      'commodity',
+      'commodityGroup',
+      'nearestPort',
+      'nearestLanding',
+    ],
+    flags: [],
+  },
+  'local-au-ports': {
+    numeric: [],
+    text: ['name', 'state', 'commodities'],
+    flags: [],
+  },
+  'nem-generation': {
+    numeric: ['mw', 'pct'],
+    text: ['region', 'fuel'],
+    flags: [],
+  },
 };
 
 const EARTH_R_KM = 6371;

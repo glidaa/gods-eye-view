@@ -85,13 +85,6 @@ const chipText = (chip) =>
 // Shaped exactly like MapStackController.getStacks() output.
 const CONTROLLER_STACKS = [
   {
-    id: 'photoreal',
-    label: 'Google 3D',
-    requiresIon: false,
-    available: true,
-    unavailableReason: null,
-  },
-  {
     id: 'bing-aerial',
     label: 'Bing Aerial',
     requiresIon: true,
@@ -107,7 +100,7 @@ const CONTROLLER_STACKS = [
   },
   {
     id: 'esri-imagery',
-    label: 'Esri Satellite',
+    label: 'Satellite',
     requiresIon: false,
     available: true,
     unavailableReason: null,
@@ -121,26 +114,24 @@ const CONTROLLER_STACKS = [
   },
 ];
 
-test('the row renders exactly the five owner-approved sources', () => {
+test('the row renders exactly the four owner-approved sources', () => {
   const container = makeElement();
   renderMapStackChips(container, CONTROLLER_STACKS, {
-    activeId: 'photoreal',
+    activeId: 'esri-imagery',
     doc,
   });
 
   assert.deepEqual(
     container.children.map((chip) => chip.dataset.stackId),
-    ['photoreal', 'bing-aerial', 'bing-labels', 'esri-imagery', 'osm'],
+    ['bing-aerial', 'bing-labels', 'esri-imagery', 'osm'],
   );
   assert.deepEqual(container.children.map(chipText), [
-    'Google 3D',
     'Bing Aerial',
     'Bing Labels',
-    'Esri Satellite',
+    'Satellite',
     'OSM',
   ]);
   assert.deepEqual(PRESENTED_MAP_STACK_IDS, [
-    'photoreal',
     'bing-aerial',
     'bing-labels',
     'esri-imagery',
@@ -166,16 +157,16 @@ test('internal and future stacks stay outside the approved presentation set', ()
     ...CONTROLLER_STACKS,
     { id: 'hybrid', label: 'Hybrid', available: true },
   ];
-  renderMapStackChips(container, withHybrid, { activeId: 'photoreal', doc });
+  renderMapStackChips(container, withHybrid, { activeId: 'esri-imagery', doc });
 
-  assert.equal(container.children.length, 5);
+  assert.equal(container.children.length, 4);
   assert.doesNotMatch(container.children.map(chipText).join(' '), /Hybrid/);
 });
 
 test('re-rendering replaces the previous chips instead of stacking a second row', () => {
   const container = makeElement();
   renderMapStackChips(container, CONTROLLER_STACKS, {
-    activeId: 'photoreal',
+    activeId: 'esri-imagery',
     doc,
   });
   renderMapStackChips(container, CONTROLLER_STACKS, { activeId: 'osm', doc });
@@ -187,14 +178,14 @@ test('clicking a chip dispatches that stack id — the same selection the dropdo
   const container = makeElement();
   const selected = [];
   renderMapStackChips(container, CONTROLLER_STACKS, {
-    activeId: 'photoreal',
+    activeId: 'esri-imagery',
     onSelect: (stackId) => selected.push(stackId),
     doc,
   });
 
-  container.children[4].click();
   container.children[3].click();
-  container.children[1].click();
+  container.children[2].click();
+  container.children[0].click();
   assert.deepEqual(selected, ['osm', 'esri-imagery', 'bing-aerial']);
 });
 
@@ -223,21 +214,21 @@ test('the active chip is the pressed chip, and exactly one is pressed', () => {
 test('the lit chip tracks controller state, not the click', () => {
   const container = makeElement();
   renderMapStackChips(container, CONTROLLER_STACKS, {
-    activeId: 'photoreal',
+    activeId: 'esri-imagery',
     doc,
   });
 
   // A rejected/superseded switch reports the stack that is genuinely active.
-  syncMapStackChips(container, 'photoreal');
-  assert.ok(container.children[0].classList.contains('active'));
-  assert.equal(container.children[4].getAttribute('aria-pressed'), 'false');
+  syncMapStackChips(container, 'esri-imagery');
+  assert.ok(container.children[2].classList.contains('active'));
+  assert.equal(container.children[3].getAttribute('aria-pressed'), 'false');
 
   // A landed switch moves both the class and the pressed state.
   syncMapStackChips(container, 'osm');
-  assert.ok(container.children[4].classList.contains('active'));
-  assert.equal(container.children[4].getAttribute('aria-pressed'), 'true');
-  assert.ok(!container.children[0].classList.contains('active'));
-  assert.equal(container.children[0].getAttribute('aria-pressed'), 'false');
+  assert.ok(container.children[3].classList.contains('active'));
+  assert.equal(container.children[3].getAttribute('aria-pressed'), 'true');
+  assert.ok(!container.children[2].classList.contains('active'));
+  assert.equal(container.children[2].getAttribute('aria-pressed'), 'false');
 });
 
 test('keyless ion stacks stay focusable, aria-disabled, and say why', () => {
@@ -254,12 +245,12 @@ test('keyless ion stacks stay focusable, aria-disabled, and say why', () => {
   );
   const selected = [];
   renderMapStackChips(container, keyless, {
-    activeId: 'photoreal',
+    activeId: 'esri-imagery',
     onSelect: (stackId) => selected.push(stackId),
     doc,
   });
 
-  const bingAerial = container.children[1];
+  const bingAerial = container.children[0];
   assert.equal(
     bingAerial.disabled,
     false,
@@ -292,38 +283,34 @@ test('keyless ion stacks stay focusable, aria-disabled, and say why', () => {
 });
 
 test('a non-ion stack that fails never claims an ion token is required', () => {
-  // The startup fallback-to-OSM case: Google 3D tiles failed to load, so
-  // photoreal is unavailable for a reason that has nothing to do with ion.
+  // The Esri→OSM construction-fallback case: Esri failed to load, so it is
+  // unavailable for a reason that has nothing to do with ion.
   const container = makeElement();
   const tilesFailed = CONTROLLER_STACKS.map((stack) =>
-    stack.id === 'photoreal'
+    stack.id === 'esri-imagery'
       ? {
           ...stack,
           available: false,
-          unavailableReason:
-            'Needs GOOGLE_MAPS_API_KEY — add it in Provider Settings',
+          unavailableReason: 'Satellite is unavailable; using OSM',
         }
       : stack,
   );
   renderMapStackChips(container, tilesFailed, { activeId: 'osm', doc });
 
-  const google = container.children[0];
-  assert.equal(google.getAttribute('aria-disabled'), 'true');
+  const esri = container.children[2];
+  assert.equal(esri.getAttribute('aria-disabled'), 'true');
   assert.equal(
-    google.getAttribute('aria-label'),
-    'Google 3D unavailable: Needs GOOGLE_MAPS_API_KEY — add it in Provider Settings',
+    esri.getAttribute('aria-label'),
+    'Satellite unavailable: Satellite is unavailable; using OSM',
   );
   assert.equal(
-    chipText(google),
-    'Google 3D',
+    chipText(esri),
+    'Satellite',
     'no ION badge on a stack that does not need ion',
   );
+  assert.equal(esri.title, 'Satellite is unavailable; using OSM');
   assert.equal(
-    google.title,
-    'Needs GOOGLE_MAPS_API_KEY — add it in Provider Settings',
-  );
-  assert.equal(
-    chipText(container.children[1]),
+    chipText(container.children[0]),
     'Bing Aerial',
     'available ion stacks stay unbadged',
   );

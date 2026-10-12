@@ -2,9 +2,17 @@ import * as Cesium from 'cesium';
 
 /**
  * Camera presets for notable locations.
- * Phase 1 default: fly to Austin, TX on load.
+ * Default: Sydney, NSW on load.
  */
 export const CAMERA_PRESETS = {
+  sydney: {
+    destination: Cesium.Cartesian3.fromDegrees(151.2093, -33.8688, 8000),
+    orientation: {
+      heading: Cesium.Math.toRadians(15),
+      pitch: Cesium.Math.toRadians(-45),
+      roll: 0.0,
+    },
+  },
   austin: {
     destination: Cesium.Cartesian3.fromDegrees(-97.7431, 30.2672, 800),
     orientation: {
@@ -47,13 +55,13 @@ export function flyToPreset(viewer, presetName, duration = 3.0) {
 }
 
 /**
- * Set camera to Austin on load with a cinematic fly-in.
+ * Set camera to Sydney, NSW on load with a cinematic fly-in.
  * @returns {Function} Cancels the pending or active startup flight.
  */
-export function flyToAustin(viewer) {
+export function flyToNsw(viewer) {
   // Start from a high altitude, then fly down
   viewer.camera.setView({
-    destination: Cesium.Cartesian3.fromDegrees(-97.7431, 30.2672, 25000),
+    destination: Cesium.Cartesian3.fromDegrees(151.2093, -33.8688, 25000),
     orientation: {
       heading: Cesium.Math.toRadians(0),
       pitch: Cesium.Math.toRadians(-90),
@@ -65,10 +73,10 @@ export function flyToAustin(viewer) {
   const timer = setTimeout(() => {
     if (viewer.isDestroyed()) return;
     viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(-97.7431, 30.2672, 600),
+      destination: Cesium.Cartesian3.fromDegrees(151.2093, -33.8688, 8000),
       orientation: {
         heading: Cesium.Math.toRadians(15),
-        pitch: Cesium.Math.toRadians(-30),
+        pitch: Cesium.Math.toRadians(-45),
         roll: 0.0,
       },
       duration: 4.0,

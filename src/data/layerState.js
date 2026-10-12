@@ -462,6 +462,11 @@ export const LAYER_STATE_REGISTRY = Object.freeze([
     disposition: 'enabled-only',
   }),
   Object.freeze({
+    id: 'aus-energy-grid',
+    token: '5',
+    disposition: 'enabled-only',
+  }),
+  Object.freeze({
     id: 'bhote-koshi-2026',
     token: 'h',
     disposition: 'enabled-only',
@@ -486,6 +491,21 @@ export const LAYER_STATE_REGISTRY = Object.freeze([
     disposition: 'enabled+options',
     optionOwner: 'flights',
   }),
+  Object.freeze({
+    id: 'local-au-mines',
+    token: '3',
+    disposition: 'enabled-only',
+  }),
+  Object.freeze({
+    id: 'local-au-ports',
+    token: '2',
+    disposition: 'enabled-only',
+  }),
+  Object.freeze({
+    id: 'local-au-power',
+    token: '4',
+    disposition: 'enabled-only',
+  }),
   Object.freeze({ id: 'local-dams', token: 'q', disposition: 'enabled-only' }),
   Object.freeze({
     id: 'local-datacenters',
@@ -507,6 +527,11 @@ export const LAYER_STATE_REGISTRY = Object.freeze([
   Object.freeze({
     id: 'military-installations',
     token: 'i',
+    disposition: 'enabled-only',
+  }),
+  Object.freeze({
+    id: 'nem-generation',
+    token: '6',
     disposition: 'enabled-only',
   }),
   Object.freeze({

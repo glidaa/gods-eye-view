@@ -854,9 +854,9 @@ test('Escape clears the preview first, then cancels the box tool, then blurs the
   assert.equal(idle.defaultPrevented, false);
 });
 
-test('the notice line shows the refusal, then errors, then CLEAR, then the Esri note; the hint names the next step and that SWAP trades the sides', async () => {
+test('the notice line shows the refusal, then errors, then CLEAR; the hint names the next step and that SWAP trades the sides', async () => {
   const controller = fakeController();
-  let active = 'photoreal';
+  let active = 'esri-imagery';
   controller.getActiveId = () => active;
   const f = fixture({ controller });
   const notice = f.byId('ri-notice');
@@ -873,11 +873,9 @@ test('the notice line shows the refusal, then errors, then CLEAR, then the Esri 
   active = 'esri-imagery';
   controller.lease.settle({ status: 'ready', activeId: active });
   await settle();
-  assert.equal(
-    noticeText.textContent,
-    'Imagery on Esri · Google 3D returns when cleared',
-  );
-  assert.equal(notice.classList.contains('info'), true);
+  // 'preserve' never borrows the map, so no Esri note interrupts the line.
+  assert.equal(noticeText.textContent, '');
+  assert.equal(notice.classList.contains('info'), false);
   f.layer.setBox({ west: 0, south: 0, east: 20, north: 20 });
   assert.equal(noticeText.textContent, 'Box is 2,226 km wide · limit 1,000 km');
   assert.equal(notice.classList.contains('warn'), true);

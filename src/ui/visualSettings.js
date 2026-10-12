@@ -139,7 +139,7 @@ export class VisualSettings {
       setScopeMaskFeather(pct / 100);
     }
     // null restores the altitude-adaptive ramp; a number pins the terminus
-    // (clamped to the supported 94..100 band, same as the `sce` hash key).
+    // (clamped to the supported 35..100 band, same as the `sce` hash key).
     if (scopeTerminusPct === null) setScopeTerminusOverride(null);
     else if (typeof scopeTerminusPct === 'number') {
       const pinned = clampScopeTerminusPct(scopeTerminusPct);
@@ -797,7 +797,7 @@ export class VisualSettings {
           getScopeTerminusOverride() == null
             ? null
             : Math.round(getScopeTerminusOverride() * 100),
-        mapStack: this.mapStackController?.getActiveId?.() || 'photoreal',
+        mapStack: this.mapStackController?.getActiveId?.() || 'esri-imagery',
       },
     };
   }
@@ -1149,7 +1149,7 @@ export class VisualSettings {
         enabled: isScopeMaskEnabled(),
         featherPct: Math.round(getScopeMaskFeather() * 100),
       },
-      mapStack: this.mapStackController?.getActiveId?.() || 'photoreal',
+      mapStack: this.mapStackController?.getActiveId?.() || 'esri-imagery',
       styleParams,
     };
   }

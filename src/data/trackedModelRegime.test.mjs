@@ -44,7 +44,7 @@ import militaryFlightsLayer, {
   _ensureFleetModelForTest as militaryEnsureFleetModel,
 } from './militaryFlights.js';
 import { clearTr3bRegistry, setTr3b } from './tr3bRegistry.js';
-import { reportMeshFloorCell, _clearMeshFloorCellsForTest } from './groundFloor.js';
+import { reportMeshFloorCell, setMeshFloorPreferred, _clearMeshFloorCellsForTest } from './groundFloor.js';
 
 // Sample altitudes are expressed RELATIVE to the band rather than as absolute
 // offsets. The thresholds have already been retuned once (1_000_000 → 150_000
@@ -450,6 +450,9 @@ for (const fixture of LAYERS) {
     fixture.layer.stopTracking();
     fixture.layer.setParams({ models3d: false });
     _clearMeshFloorCellsForTest();
+    // This repro plays out under a tileset stack, so enter the mesh regime
+    // the boot default (all globes) no longer assumes.
+    setMeshFloorPreferred(true);
 
     const realNow = Date.now;
     let now = 5_000_000;
@@ -568,6 +571,7 @@ for (const fixture of LAYERS) {
       Date.now = realNow;
       fixture.layer.stopTracking();
       _clearMeshFloorCellsForTest();
+      setMeshFloorPreferred(false);
     }
   });
 

@@ -23,6 +23,9 @@ export const MIN_AUTO_HOP_SEC = 8;
 
 export const MAX_AUTO_HOP_SEC = 90;
 
+/** Automatic hops draw from this many nearest cameras to the viewer. */
+export const CCTV_HOP_POOL_LIMIT = 50;
+
 export const HEALTH_SYNC_INTERVAL_MS = 7000;
 
 export const IDLE_FRAME_REFRESH_MS = 60000;

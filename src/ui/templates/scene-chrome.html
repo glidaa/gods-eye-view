@@ -7,10 +7,53 @@
     <div id="world-overlay-status" role="status" aria-live="polite" aria-atomic="true"></div>
   </div>
 
-  <!-- Title -->
+  <!-- Transport bar: brand left, notifications + menu right. Keeps the
+       #title-bar id (layout obstacles, stacking pins and the fps meter all
+       anchor to it) with new content. -->
   <div id="title-bar">
     <div class="title-glow"></div>
-    <p class="subtitle">NO PLACE LEFT BEHIND</p>
+    <div class="transport-brand">
+      <strong>TRANSPORT</strong>
+      <p class="subtitle">NO PLACE LEFT BEHIND</p>
+    </div>
+    <div class="transport-cluster">
+      <button id="help-btn" type="button" aria-label="Help — what you can do" title="Help — what you can do">
+        <span class="material-symbols-outlined" aria-hidden="true">help</span>
+      </button>
+      <div class="transport-bell-wrap">
+        <button id="notifications-btn" type="button" aria-label="Notifications" aria-expanded="false" aria-controls="notifications-list" title="Notifications">
+          <span class="material-symbols-outlined" aria-hidden="true">notifications</span>
+          <span id="notifications-count" class="transport-badge" hidden>0</span>
+        </button>
+        <div id="notifications-list" class="transport-dropdown" role="menu" aria-label="Notifications" hidden></div>
+      </div>
+      <div class="transport-menu-wrap">
+        <button id="transport-menu-btn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="transport-menu" title="Menu">
+          <span class="material-symbols-outlined" aria-hidden="true">menu</span>
+        </button>
+        <div id="transport-menu" class="transport-dropdown" role="menu" aria-label="Transport menu" hidden>
+          <button type="button" role="menuitem" data-transport-action="nsw-views">NSW displays</button>
+          <button type="button" role="menuitem" data-transport-action="help">Help</button>
+          <button type="button" role="menuitem" data-transport-action="share">Copy share link</button>
+          <button type="button" role="menuitem" data-transport-action="providers">Provider settings</button>
+          <button type="button" role="menuitem" data-transport-action="attribution">Data attribution</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom status bar: live coords/stack center, layer counts right. The
+       left third stays empty — the attribution credit line lives there,
+       untouched, above this bar's backdrop. -->
+  <div id="transport-bottombar" aria-label="Status bar">
+    <div class="transport-status-center">
+      <span id="transport-coords">--</span>
+      <span class="transport-sep" aria-hidden="true">·</span>
+      <span id="transport-stack">--</span>
+    </div>
+    <div class="transport-status-right">
+      <span id="transport-layers">--</span>
+    </div>
   </div>
 
   <!-- Style indicator -->
@@ -21,22 +64,31 @@
 
   <!-- Top-center camera and share actions -->
   <nav id="top-center-actions" aria-label="Globe actions">
-    <button id="clear-selected-layers" type="button" aria-label="Clear selected data layers" title="Turn off all selected data layers">
+    <button id="globe-actions-btn" type="button" aria-label="Globe actions menu" aria-expanded="false" aria-controls="globe-actions-menu" title="Globe actions">
+      <span class="material-symbols-outlined" aria-hidden="true">apps</span>
+    </button>
+    <div id="globe-actions-menu" class="transport-dropdown" role="menu" aria-label="Globe actions" hidden>
+    <button id="clear-selected-layers" type="button" role="menuitem" aria-label="Clear selected data layers" title="Turn off all selected data layers">
       <span class="material-symbols-outlined" aria-hidden="true">layers_clear</span>
+      <span class="globe-action-label" aria-hidden="true">Clear layers</span>
     </button>
-    <button id="share-btn" type="button" aria-label="Copy share link" title="Copy share link">
+    <button id="share-btn" type="button" role="menuitem" aria-label="Copy share link" title="Copy share link">
       <span class="share-icon" aria-hidden="true">&#x1F517;</span>
+      <span class="globe-action-label" aria-hidden="true">Copy share link</span>
     </button>
-    <button id="tilt-map-view" type="button" aria-label="Tilt map to oblique view" aria-pressed="false" title="Toggle straight-down and tilted map views">
+    <button id="tilt-map-view" type="button" role="menuitem" aria-label="Tilt map to oblique view" aria-pressed="false" title="Toggle straight-down and tilted map views">
       <span class="material-symbols-outlined" aria-hidden="true">view_in_ar</span>
+      <span class="globe-action-label" aria-hidden="true">Tilt view</span>
     </button>
-    <button id="north-up-view" type="button" aria-label="Reset map to north up" title="Reset map bearing to north">
-      <span class="camera-compass-n" aria-hidden="true">N</span>
+    <button id="north-up-view" type="button" role="menuitem" aria-label="Reset map to north up" title="Reset map bearing to north">
       <span class="camera-compass-needle material-symbols-outlined" aria-hidden="true">navigation</span>
+      <span class="globe-action-label" aria-hidden="true">North up</span>
     </button>
-    <button id="reset-globe-view" type="button" aria-label="Reset to full globe view" title="Reset camera and return to full globe view">
+    <button id="reset-globe-view" type="button" role="menuitem" aria-label="Reset to full globe view" title="Reset camera and return to full globe view">
       <span class="material-symbols-outlined" aria-hidden="true">public</span>
+      <span class="globe-action-label" aria-hidden="true">Reset globe</span>
     </button>
+    </div>
   </nav>
   <div id="global-loading-status" role="status" aria-live="polite" aria-atomic="true" hidden>
     <span id="global-loading-label">LOADING LIVE DATA</span>

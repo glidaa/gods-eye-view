@@ -8,22 +8,27 @@
   --glass-bg: rgba(12, 12, 20, 0.72);
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-border-hover: rgba(255, 255, 255, 0.15);
-  --accent: #00d4ff;
-  --accent-dim: rgba(0, 212, 255, 0.15);
-  --accent-glow: rgba(0, 212, 255, 0.4);
+  --accent: #ffffff;
+  --accent-dim: rgba(255, 255, 255, 0.15);
+  --accent-glow: rgba(255, 255, 255, 0.4);
   --text-primary: #e8eaed;
-  --text-secondary: rgba(232, 234, 237, 0.5);
-  --text-dim: rgba(232, 234, 237, 0.3);
+  --text-secondary: rgba(232, 234, 237, 0.85);
+  --text-dim: rgba(232, 234, 237, 0.65);
   /* Opaque surface for browser-painted menus, which cannot use --glass-bg. */
   --menu-bg: #12121c;
-  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  /* Product decision: the whole UI renders in Open Sans, white. The --font-mono
+     slot keeps its name (dozens of references) but now resolves to Open Sans;
+     tabular-nums on body keeps HUD readouts from jittering in the
+     proportional font. */
+  --font-mono: 'Open Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-sans:
+    'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --panel-radius: 16px;
   --btn-radius: 10px;
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  --left-stack-x: 52px;
-  --right-rail-x: 52px;
+  --left-stack-x: 14px;
+  --right-rail-x: 14px;
   --left-stack-top: 26vh;
   --left-stack-gap: 72px;
   --left-collapsed-width: 176px;
@@ -99,6 +104,7 @@ body {
   background: var(--bg-dark);
   font-family: var(--font-sans);
   color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -233,7 +239,7 @@ body.cockpit-mode #cockpit-cloud-effects.active {
 .celestial-ring-outline {
   position: absolute;
   box-sizing: border-box;
-  border: 0.8px solid rgba(151, 218, 232, 0.095);
+  border: 0.8px solid rgba(200, 200, 200, 0.095);
   border-radius: 50%;
   will-change: width, height;
 }
@@ -264,10 +270,10 @@ body.cockpit-mode #cockpit-cloud-effects.active {
 }
 
 .celestial-moon {
-  color: rgba(55, 211, 239, 0.84);
+  color: rgba(255, 255, 255, 0.84);
   text-shadow:
-    0 0 7px rgba(55, 211, 239, 0.65),
-    0 0 17px rgba(55, 211, 239, 0.25);
+    0 0 7px rgba(255, 255, 255, 0.65),
+    0 0 17px rgba(255, 255, 255, 0.25);
 }
 
 #celestial-toggle:disabled {
@@ -301,20 +307,37 @@ body.cockpit-mode #cockpit-cloud-effects.active {
   left: 36px;
   z-index: 90;
   max-width: 90vw;
-  /* Keep the Google logo + "Data attribution" link on ONE line — they were wrapping to a second
+  /* Keep the credit text + "Data attribution" link on ONE line — they were wrapping to a second
      row (looked like it was falling over). nowrap + a roomy max-width holds them inline. */
   white-space: nowrap;
   pointer-events: auto;
   font-family: var(--font-mono);
   font-size: 10px;
-  color: rgba(232, 234, 237, 0.55);
+  color: rgba(232, 234, 237, 0.82);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
 }
-#cesium-credits .cesium-credit-logoContainer,
 #cesium-credits .cesium-credit-textContainer,
 #cesium-credits .cesium-credit-expand-link {
   display: inline-block;
   vertical-align: middle;
+}
+/* No vendor logo images on the map (product decision): the logo container —
+   Cesium ion + Google image marks — is hidden while the text credit line and
+   the "Data attribution" lightbox link stay visible with the full license
+   list. The !important wins over the inline styles Cesium re-applies each
+   frame. NOTE: Google Maps Platform ToS and Cesium ion terms require their
+   marks alongside the content, so this trades strict ToS compliance for a
+   clean map — revisit before any public or demo footage. */
+#cesium-credits .cesium-credit-logoContainer {
+  display: none !important;
+}
+/* No SaaS upsell link on the map (product decision): a community ion token
+   attaches "Upgrade for commercial use" (cesium.com/pricing) next to the
+   imagery credit. That link is marketing, not a data attribution — every
+   provider and layer credit stays one click away under "Data attribution".
+   Same ToS tradeoff as the logo rule above; revisit before public footage. */
+#cesium-credits a[href*='cesium.com/pricing'] {
+  display: none !important;
 }
 #cesium-credits a,
 #cesium-credits .cesium-credit-expand-link {
@@ -384,17 +407,18 @@ body:has(.data-toggle-row[data-layer-id='alpr-cameras'] .data-toggle-btn.active)
     margin: 0 !important;
   }
 }
-/* Clean-view / recording: the Google + Cesium attribution MUST stay visible.
+/* Clean-view / recording: the text attribution MUST stay visible.
    Google Maps Platform ToS and Cesium's terms require the credit whenever the
    content is displayed — and these are exactly the modes used to record demos
    and launch videos, so hiding #cesium-credits here (as it was before) shipped
-   non-compliant footage. The full credit line — Cesium/Ion logo, "Google Maps",
-   and the "Data attribution" link that opens the per-layer license popover —
-   stays on screen; it's already styled small and unobtrusive above. The GEV
-   chrome (panels/HUD) still fades via its own rules; only the required notice
-   is exempt. (Note: Cesium re-applies inline styles on the credit elements each
-   frame, so the on-screen credit content is owned by Cesium's update loop, not
-   CSS overrides — we deliberately don't fight it here.) */
+   non-compliant footage. The text credit line — "Google Maps" wording and the
+   "Data attribution" link that opens the per-layer license popover — stays on
+   screen; it's already styled small and unobtrusive above. The vendor logo
+   IMAGES stay hidden per the product decision above (see its ToS note). The
+   GEV chrome (panels/HUD) still fades via its own rules; only the required
+   notice is exempt. (Note: Cesium re-applies inline styles on the credit
+   elements each frame, so the on-screen credit content is owned by Cesium's
+   update loop — the logo rule above uses !important to hold against it.) */
 
 #gev-voice-control {
   position: fixed;
@@ -415,7 +439,7 @@ body:has(.data-toggle-row[data-layer-id='alpr-cameras'] .data-toggle-btn.active)
     0 8px 32px rgba(0, 0, 0, 0.5),
     0 0 0 1px rgba(255, 255, 255, 0.03) inset,
     0 1px 0 rgba(255, 255, 255, 0.06) inset,
-    0 0 20px rgba(0, 212, 255, 0.08);
+    0 0 20px rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(24px) saturate(1.4);
   -webkit-backdrop-filter: blur(24px) saturate(1.4);
   font-family: var(--font-mono);
@@ -427,8 +451,8 @@ body:has(.data-toggle-row[data-layer-id='alpr-cameras'] .data-toggle-btn.active)
   height: 34px;
   flex: 0 0 auto;
   color: var(--accent);
-  background: rgba(0, 212, 255, 0.06);
-  border: 1px solid rgba(0, 212, 255, 0.28);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: var(--btn-radius);
   font-family: var(--font-mono);
   font-size: 10px;
@@ -439,7 +463,7 @@ body:has(.data-toggle-row[data-layer-id='alpr-cameras'] .data-toggle-btn.active)
 #gev-voice-button:hover {
   color: #ffffff;
   border-color: var(--accent);
-  box-shadow: 0 0 12px rgba(0, 212, 255, 0.22);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.22);
 }
 
 .gev-voice-readout {
@@ -464,11 +488,11 @@ body:has(.data-toggle-row[data-layer-id='alpr-cameras'] .data-toggle-btn.active)
 }
 
 #gev-voice-control[data-status='listening'] {
-  border-color: rgba(92, 255, 198, 0.45);
+  border-color: rgba(255, 255, 255, 0.45);
 }
 
 #gev-voice-control[data-status='listening'] #gev-voice-status {
-  color: #5cffc6;
+  color: #ffffff;
 }
 
 #gev-voice-control[data-status='executing'] {
@@ -546,7 +570,7 @@ body:has(.data-toggle-row[data-layer-id='alpr-cameras'] .data-toggle-btn.active)
   display: block;
   width: 52px;
   height: auto;
-  filter: drop-shadow(0 0 12px rgba(0, 246, 255, 0.5));
+  filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.5));
 }
 
 #title-bar .title-logo::before,

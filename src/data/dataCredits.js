@@ -6,9 +6,11 @@ import * as Cesium from 'cesium';
  * Legal requirement (see DATA_SOURCES.md, findings H10/H11 in
  * docs/pre-ship-audit-2026-07-01.md): every third-party data layer this app can
  * display carries its own license and required attribution — ODbL (OSM
- * datacenters/dams, adsb.lol, Overpass roads), CC BY-NC-SA (TeleGeography
- * cables), NASA FIRMS, CelesTrak, USGS, City of Austin, Fintraffic (CC BY 4.0),
- * The MIT code license does NOT cover this data.
+ * datacenters/dams/Australian power stations, adsb.lol, Overpass roads),
+ * CC BY-NC-SA (TeleGeography cables), CC BY 4.0 (Geoscience Australia ports
+ * and mines, Fintraffic), OpenElectricity (live NEM mix), NASA FIRMS,
+ * CelesTrak, USGS, City of Austin. The MIT code license does NOT cover
+ * this data.
  *
  * These credits are registered ONCE at init as STATIC credits with
  * showOnScreen=false, so they live in the expandable bottom-left "Data
@@ -115,6 +117,20 @@ export const DATA_CREDITS = [
       'Mapped installation context: ' +
       '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a> ' +
       '(ODbL 1.0; incomplete mapped context)',
+  },
+  {
+    key: 'aus-energy-grid-osm',
+    html:
+      'Live energy &amp; industry context (substations, transmission, refineries): ' +
+      '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a> ' +
+      '(ODbL 1.0; incomplete mapped context)',
+  },
+  {
+    key: 'nem-generation',
+    html:
+      'Live NEM generation mix: ' +
+      '<a href="https://openelectricity.org.au" target="_blank" rel="noopener">OpenElectricity</a> ' +
+      '(5-minute regional power by fuel; underlying market data Australian Energy Market Operator)',
   },
   {
     key: 'cockpit-place-osm',
@@ -267,6 +283,27 @@ export const DATA_CREDITS = [
       'Dams: ' +
       '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a> ' +
       '(ODbL 1.0) + Open Infrastructure Map',
+  },
+  {
+    key: 'au-ports',
+    html:
+      'Australian resources export ports: © Commonwealth of Australia ' +
+      '(<a href="https://www.ga.gov.au" target="_blank" rel="noopener">Geoscience Australia</a>) ' +
+      '(<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>)',
+  },
+  {
+    key: 'au-mines',
+    html:
+      'Australian operating mines 2025: © Commonwealth of Australia ' +
+      '(<a href="https://www.ga.gov.au" target="_blank" rel="noopener">Geoscience Australia</a>) ' +
+      '(<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>)',
+  },
+  {
+    key: 'au-power',
+    html:
+      'Australian power stations: ' +
+      '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a> ' +
+      '(ODbL 1.0; incomplete mapped context)',
   },
   {
     key: 'firms',

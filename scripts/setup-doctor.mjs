@@ -5,15 +5,13 @@ import path from 'node:path';
 import { parseEnv } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { projectRoot } from './project-root.mjs';
-import { selectMapStartupRoute } from '../src/mapStartup.js';
 
 const ROOT = projectRoot(import.meta.url);
 const OPENSKY_AUTH_MODE_DEFAULT = 'oauth';
 const OPENSKY_AUTH_MODES = new Set(['basic', 'oauth', 'auto', 'anon']);
 
 export const CREDENTIALS = Object.freeze([
-  { name: 'GOOGLE_MAPS_API_KEY', label: 'Google Maps', keychain: [['google-maps-api', 'api-key'], ['google-maps-api', 'default'], ['google-maps-api', 'key']] },
-  { name: 'GOOGLE_MAPS_SERVER_API_KEY', label: 'Google Places / Street View server', keychain: [] },
+  { name: 'GOOGLE_MAPS_SERVER_API_KEY', label: 'Places / Street View server', keychain: [] },
   { name: 'CESIUM_ION_TOKEN', label: 'Cesium ion', keychain: [['cesium-ion', 'token']] },
   { name: 'OPENAI_API_KEY', label: 'OpenAI voice', keychain: [['openai-api', 'api-key']] },
   { name: 'AISSTREAM_API_KEY', label: 'AISStream vessels', keychain: [['aisstream-api', 'api-key']] },
@@ -164,16 +162,11 @@ export function buildCapabilitySummary(
         : hasOAuthCredentials
           ? 'OpenSky OAuth credentials present (runtime mode and validity not verified)'
           : 'OpenSky keyless anonymous access (rate-limited)';
-  const route = selectMapStartupRoute({
-    googleApiKey: configured('GOOGLE_MAPS_API_KEY') ? 'configured' : '',
-    cesiumToken: configured('CESIUM_ION_TOKEN') ? 'configured' : '',
-  });
+  const hasIon = configured('CESIUM_ION_TOKEN');
   return {
-    map: route === 'google-direct'
-      ? 'Google Photorealistic 3D Tiles (direct)'
-      : route === 'google-ion'
-        ? 'Google Photorealistic 3D Tiles through Cesium ion; Bing and world-terrain stacks available'
-        : 'Esri World Imagery (keyless satellite basemap) with keyless terrain',
+    map: hasIon
+      ? 'Esri World Imagery + Bing stacks with Cesium world terrain'
+      : 'Esri World Imagery (keyless satellite basemap) with keyless terrain',
     flights,
     voice: configured('OPENAI_API_KEY') ? 'available' : 'off until an OpenAI key is added',
     vessels: configured('AISSTREAM_API_KEY') ? 'live AISStream feed' : 'off until an AISStream key is added',

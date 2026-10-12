@@ -1,13 +1,6 @@
 import * as Cesium from 'cesium';
 export const MAP_STACKS = [
   {
-    id: 'photoreal',
-    label: 'Google 3D',
-    shortLabel: '3D',
-    kind: 'photoreal',
-    requiresIon: false,
-  },
-  {
     id: 'bing-aerial',
     label: 'Bing Aerial',
     shortLabel: 'Aerial',
@@ -25,7 +18,7 @@ export const MAP_STACKS = [
   },
   {
     id: 'esri-imagery',
-    label: 'Esri Satellite',
+    label: 'Satellite',
     shortLabel: 'SAT',
     kind: 'esri-imagery',
     requiresIon: false,

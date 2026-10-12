@@ -7,6 +7,7 @@ import {
   assertNode24AllocationRuntime,
   buildUnitTestPlan,
   isCalibratedAllocationRuntime,
+  parallelTestArgs,
 } from '../scripts/run-unit-tests.mjs';
 
 test('unit runner serializes only GC-bracketed allocation microbenchmarks', () => {
@@ -50,6 +51,23 @@ test('allocation runtime calibration is explicit and pinned to Node 24', () => {
   assert.equal(isCalibratedAllocationRuntime('24.19.0'), true);
   assert.equal(isCalibratedAllocationRuntime('22.23.1'), false);
   assert.equal(isCalibratedAllocationRuntime('26.3.0'), false);
+});
+
+test('GEV_TEST_CONCURRENCY caps parallel workers; junk keeps the default', () => {
+  const files = ['a.test.mjs', 'b.test.mjs'];
+  assert.deepEqual(parallelTestArgs(files, {}), ['--test', ...files]);
+  assert.deepEqual(parallelTestArgs(files, { GEV_TEST_CONCURRENCY: '2' }), [
+    '--test',
+    '--test-concurrency=2',
+    ...files,
+  ]);
+  for (const junk of ['0', '-3', 'lots', '', '  ']) {
+    assert.deepEqual(
+      parallelTestArgs(files, { GEV_TEST_CONCURRENCY: junk }),
+      ['--test', ...files],
+      `junk concurrency is ignored: ${JSON.stringify(junk)}`,
+    );
+  }
 });
 
 test('npm test stays green on every supported engine, not only the calibrated one', () => {

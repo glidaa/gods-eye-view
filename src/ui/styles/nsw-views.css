@@ -1,0 +1,139 @@
+/* NSW demo displays: bottom-left icon dock plus the all-views menu.
+   Sits above the credit line (required attribution stays untouched below).
+   Glyphs stay white; the NSW red marks the active display only. */
+
+.nsw-views {
+  position: fixed;
+  bottom: 44px;
+  left: 12px;
+  z-index: 140;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.nsw-views-row {
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: rgba(9, 18, 27, 0.84);
+  border: 1px solid rgba(172, 172, 172, 0.28);
+  border-radius: 10px;
+  backdrop-filter: blur(28px) saturate(1.35);
+  -webkit-backdrop-filter: blur(28px) saturate(1.35);
+}
+
+.nsw-view-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  font-size: 17px;
+  line-height: 1;
+  color: #e8f0f4;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.nsw-view-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.nsw-view-btn.is-active {
+  color: #ffffff;
+  border-color: rgba(215, 21, 58, 0.9);
+  box-shadow: inset 0 -2px 0 rgba(215, 21, 58, 0.9);
+}
+
+.nsw-view-btn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.8);
+  outline-offset: 1px;
+}
+
+.nsw-views.is-disabled .nsw-view-btn {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.nsw-views-menu-btn {
+  background: rgba(9, 18, 27, 0.84);
+  border: 1px solid rgba(172, 172, 172, 0.28);
+  backdrop-filter: blur(28px) saturate(1.35);
+  -webkit-backdrop-filter: blur(28px) saturate(1.35);
+}
+
+.nsw-views-menu-list {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 270px;
+  max-width: min(78vw, 330px);
+  padding: 6px;
+  background: rgba(9, 18, 27, 0.94);
+  border: 1px solid rgba(172, 172, 172, 0.28);
+  border-radius: 10px;
+  backdrop-filter: blur(28px) saturate(1.35);
+  -webkit-backdrop-filter: blur(28px) saturate(1.35);
+}
+
+.nsw-views-menu-list[hidden] {
+  display: none;
+}
+
+.nsw-views-menu-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  color: #e8f0f4;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+
+.nsw-views-menu-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.nsw-views-menu-item.is-active {
+  border-color: rgba(215, 21, 58, 0.9);
+}
+
+.nsw-views-menu-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.nsw-views-menu-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.nsw-views-menu-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  color: #ffffff;
+}
+
+.nsw-views-menu-blurb {
+  font-size: 11px;
+  line-height: 1.35;
+  color: rgba(232, 240, 244, 0.72);
+  white-space: normal;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nsw-views-menu-list {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}

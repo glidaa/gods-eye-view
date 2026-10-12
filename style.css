@@ -18,7 +18,10 @@
 @import './src/ui/styles/command-dock-trays.css';
 @import './src/ui/styles/command-dock-sliding.css';
 @import './src/ui/styles/voice-cost.css';
+@import './src/ui/styles/voice-chat.css';
 @import './src/ui/styles/first-run.css';
 @import './src/ui/styles/provider-settings.css';
+@import './src/ui/styles/nsw-views.css';
+@import './src/ui/styles/transport-bars.css';
 
 @import './src/ui/styles/weather.css';

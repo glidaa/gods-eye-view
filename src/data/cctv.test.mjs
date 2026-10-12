@@ -64,6 +64,7 @@ import cctvLayer, {
   materializeCctvActiveCoverageEntities,
   materializeCctvVisibleCoverageEntities,
   maybeAutoHop,
+  cctvRandomHopIndex,
   prioritizeActiveCctvGeometryRecord,
   processCctvGeometryDrainBatch,
   processCctvGeometryQueueBatch,
@@ -77,6 +78,7 @@ import {
   CCTV_FOCUS_REQUEST_EVENT,
   activateCctvCameraFromWorldClick,
 } from '../cctvFocusRequest.js';
+import { createState as createCctvLayerState } from '../layers/cctv/state.js';
 
 const CCTV_PRESENTATION_SOURCE = fs.readFileSync(
   path.join(
@@ -1267,6 +1269,19 @@ test('CCTV null-active coverage, auto-hop, cycling, and panel targets stay hones
     assert.equal(cctvCycleIndex(2, 1, records.length), 0);
     assert.equal(cctvCycleIndex(0, -1, records.length), records.length - 1);
 
+    // The automatic hop draws from the random picker, not the sequential
+    // cycler — PREV/NEXT keep cctvCycleIndex, the slideshow does not.
+    assert.match(
+      maybeAutoHop.toString(),
+      /cctvRandomHopIndex/,
+      'the hop must draw a random target',
+    );
+    assert.doesNotMatch(
+      maybeAutoHop.toString(),
+      /cctvCycleIndex/,
+      'the hop must not advance sequentially',
+    );
+
     const renderer = CCTV_PRESENTATION_SOURCE.match(
       /_renderCctvState\(state\) \{[\s\S]*?\n\}\n/,
     );
@@ -1280,6 +1295,103 @@ test('CCTV null-active coverage, auto-hop, cycling, and panel targets stay hones
       /_cctvFocusBtn\.disabled\s*=\s*!enabled\s*\|\|\s*cameras\.length === 0\s*\|\|\s*!activeId/,
     );
   } finally {
+    cctvLayer.setParams({ autoHop: false });
+    _setCctvOverlayHostForTest();
+    _setCctvCoverageStateForTest({ enabled: false });
+  }
+});
+
+test('cctvRandomHopIndex draws in range and never repeats the active camera', () => {
+  // Fixed draws across a 4-camera catalog with cam-1 active.
+  assert.equal(cctvRandomHopIndex(1, 4, () => 0), 0);
+  assert.equal(cctvRandomHopIndex(1, 4, () => 0.5), 2);
+  assert.equal(cctvRandomHopIndex(1, 4, () => 0.99), 3);
+  // A draw landing on the active index steps forward one, wrapping.
+  assert.equal(cctvRandomHopIndex(1, 4, () => 0.3), 2);
+  assert.equal(cctvRandomHopIndex(3, 4, () => 0.99), 0);
+  // Degenerate catalogs.
+  assert.equal(cctvRandomHopIndex(-1, 4, () => 0.5), 2);
+  assert.equal(cctvRandomHopIndex(0, 1, () => 0.99), 0);
+  assert.equal(cctvRandomHopIndex(0, 0), -1);
+  // Fuzz: 500 draws never leave range and never repeat.
+  let random = 0.5;
+  for (let i = 0; i < 500; i += 1) {
+    random = (random * 9301 + 49297) % 233280;
+    const pick = cctvRandomHopIndex(2, 5, () => random / 233280);
+    assert.ok(pick >= 0 && pick < 5, `pick ${pick} in range`);
+    assert.notEqual(pick, 2, 'never repeats the active camera');
+  }
+});
+
+test('CCTV auto-hop defaults on for a fresh layer; an explicit off survives setParams', () => {
+  const fresh = createCctvLayerState({
+    services: {
+      overlays: {
+        clearOverlaySource() {},
+        hitTestWorldOverlay() {},
+        setOverlayEntries() {},
+        setOverlaySourceVisible() {},
+      },
+    },
+  });
+  assert.equal(fresh._autoHop, true, 'a fresh session slideshows');
+  assert.equal(fresh._autoHopSuspended, false);
+  // The link codec still defaults the flag off, so an explicit false from a
+  // link or stored state applies cleanly through the same setter.
+  _setCctvCoverageStateForTest({ enabled: false });
+  try {
+    cctvLayer.setParams({ autoHop: false });
+    assert.equal(cctvLayer.getUIState().autoHop, false);
+    cctvLayer.setParams({ autoHop: true });
+    assert.equal(cctvLayer.getUIState().autoHop, true);
+  } finally {
+    cctvLayer.setParams({ autoHop: false });
+    _setCctvCoverageStateForTest({ enabled: false });
+  }
+});
+
+test('a specific camera ask holds a full hop interval before the slideshow resumes', () => {
+  const viewer = makeDeselectViewer();
+  const records = Array.from({ length: 3 }, (_, index) =>
+    makeDeselectRecord(`cam-${index}`, index),
+  );
+  _setCctvOverlayHostForTest({
+    setEntries() {},
+    setVisible() {},
+    clearSource() {},
+  });
+  // Re-selecting the active camera is a no-op activation (no DOM-heavy path),
+  // but the ask still restarts the hop timer — so a hop inside the interval
+  // must neither fire nor throw, while without the reset the elapsed timer
+  // would fire the hop path. Each user selection route restarts it.
+  const realNow = Date.now;
+  try {
+    _setCctvCoverageStateForTest({
+      viewer,
+      records,
+      activeCameraId: records[0].camera.id,
+      enabled: true,
+      coverageMode: 'on',
+    });
+    cctvLayer.setParams({ autoHop: true, autoHopSec: 8 });
+    Date.now = () => 5_000_000;
+    assert.equal(cctvLayer.selectCamera('cam-0'), true);
+    assert.doesNotThrow(() => maybeAutoHop(5_000_000 + 7_999));
+    assert.equal(cctvLayer.getUIState().activeCameraId, 'cam-0');
+    Date.now = () => 6_000_000;
+    assert.equal(cctvLayer.cycleCamera(3), 'cam-0', 'a full cycle re-asks the same camera');
+    assert.doesNotThrow(() => maybeAutoHop(6_000_000 + 7_999));
+    assert.equal(cctvLayer.getUIState().activeCameraId, 'cam-0');
+    Date.now = () => 7_000_000;
+    cctvLayer.setParams({ selectedCameraId: 'cam-0' });
+    assert.doesNotThrow(() => maybeAutoHop(7_000_000 + 7_999));
+    assert.equal(cctvLayer.getUIState().activeCameraId, 'cam-0');
+    Date.now = () => 8_000_000;
+    assert.equal(cctvLayer.focusNearest({ focus: false }), 'cam-0');
+    assert.doesNotThrow(() => maybeAutoHop(8_000_000 + 7_999));
+    assert.equal(cctvLayer.getUIState().activeCameraId, 'cam-0');
+  } finally {
+    Date.now = realNow;
     cctvLayer.setParams({ autoHop: false });
     _setCctvOverlayHostForTest();
     _setCctvCoverageStateForTest({ enabled: false });

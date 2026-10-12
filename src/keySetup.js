@@ -38,27 +38,6 @@ export function collectKeyUpdates(fields) {
   return updates;
 }
 
-/**
- * After the FIRST Google key lands, the restart's reload should boot the
- * photoreal default — not faithfully restore the auto-selected keyless OSM
- * basemap from the URL's live share hash. Strips only `map=osm`: a stack under
- * any other name was chosen or shared on purpose and survives, and so does
- * everything else in the hash (camera, style, layers). Pure, exported for tests.
- * @param {string} hash Location hash without the leading '#'.
- * @returns {string|null} The rewritten hash, or null when there is nothing to strip.
- */
-export function stripKeylessBasemapFromHash(hash) {
-  if (!hash) return null;
-  try {
-    const params = new URLSearchParams(hash);
-    if (!['osm', 'esri-imagery'].includes(params.get('map'))) return null;
-    params.delete('map');
-    return params.toString();
-  } catch {
-    return null;
-  }
-}
-
 const TIER_DOTS = Object.freeze({ metered: '🔴', free: '🟡' });
 
 /** Build one key row. All content is our own registry text, set via textContent. */
@@ -265,9 +244,6 @@ export async function initKeySetup({
 
   const submitUpdates = async (updates, doneVerb) => {
     if (disposed || busy) return;
-    const googleWasUnset = !status?.keys?.find(
-      (key) => key.id === 'google-maps',
-    )?.set;
     busy = true;
     applyButton?.setAttribute('aria-disabled', 'true');
     say('Saving…');
@@ -287,26 +263,6 @@ export async function initKeySetup({
       for (const input of root.querySelectorAll('input[data-env-var]'))
         input.value = '';
       render(payload.status);
-      if (googleWasUnset && payload.saved?.includes('GOOGLE_MAPS_API_KEY')) {
-        const strip = () => {
-          try {
-            const next = stripKeylessBasemapFromHash(
-              globalThis.location?.hash?.slice(1) || '',
-            );
-            if (next !== null)
-              globalThis.history?.replaceState?.(null, '', `#${next}`);
-          } catch {
-            // Continuity is a nicety, never a blocker.
-          }
-        };
-        strip();
-        // The live share writer may re-serialize the still-OSM stack before
-        // the restart's reload lands, so strip again at the door.
-        globalThis.addEventListener?.('pagehide', strip, {
-          once: true,
-          signal: lifetime.signal,
-        });
-      }
       say(
         `${doneVerb} ${storeLabel()}. Restarting — this page reloads itself.`,
       );

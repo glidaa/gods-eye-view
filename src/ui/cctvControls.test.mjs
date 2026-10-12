@@ -218,3 +218,33 @@ test('disposing during camera enable prevents the delayed focus and future click
   assert.equal(enables, 1);
   assert.equal(focuses, 0);
 });
+
+test('SETTINGS shows and hides the calibration block', () => {
+  const attrs = new Map();
+  const button = Object.assign(new EventTarget(), {
+    title: '',
+    setAttribute: (key, value) => attrs.set(key, String(value)),
+    getAttribute: (key) => attrs.get(key) ?? null,
+  });
+  const block = { hidden: true };
+  const controls = new CctvControls({
+    elements: {
+      _cctvPanel: {},
+      _cctvSettingsBtn: button,
+      _cctvCalibrationBlock: block,
+    },
+    cctv: {},
+    actions: { isEnabled: () => true, syncViewport() {} },
+  });
+  try {
+    button.dispatchEvent(new Event('click'));
+    assert.equal(block.hidden, false);
+    assert.equal(button.getAttribute('aria-expanded'), 'true');
+    assert.match(button.title, /Hide/);
+    button.dispatchEvent(new Event('click'));
+    assert.equal(block.hidden, true);
+    assert.equal(button.getAttribute('aria-expanded'), 'false');
+  } finally {
+    controls.destroy();
+  }
+});

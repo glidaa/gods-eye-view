@@ -9,6 +9,7 @@ import {
   reduceTrafficSyncFeedback,
 } from '../loadingFeedback.js';
 import { setSplitFlapText, disposeSplitFlap } from '../splitFlap.js';
+import { recordNotification } from './notifications.js';
 export class ShellFeedback {
   constructor({ readLayers }) {
     this.readLayers = readLayers;
@@ -180,6 +181,7 @@ export class ShellFeedback {
 
   _showToast(message) {
     if (this.destroyed) return;
+    recordNotification(message);
     this._toast.textContent = message;
     this._toast.classList.add('visible');
     clearTimeout(this._toastTimer);

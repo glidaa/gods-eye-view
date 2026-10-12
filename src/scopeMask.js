@@ -1,7 +1,7 @@
 import { getKeyholeGeometry } from './celestialRing.js';
 
 /**
- * Scope mask — the app's signature circular viewport treatment, made real.
+ * Scope mask — the app's signature viewport treatment, made real.
  *
  * History (2026-08-08 owner field test): the scope was never implemented.
  * It emerged from six zero-intensity style PostProcessStages whose stacked
@@ -10,32 +10,43 @@ import { getKeyholeGeometry } from './celestialRing.js';
  * owner ruled: draw it explicitly on a canvas, make the edge featherable
  * (like the NVG/FLIR tube masks), and free the six shader passes for real.
  *
+ * Retreatment (2026-10-08 owner directive): the opaque circle is now a
+ * SQUARE veil — fully transparent inside the shared keyhole square,
+ * feathering to a translucent page-black tint outside, so the map reads
+ * through the frame at every altitude. Same canvas, same repaint gating.
+ *
+ * Second retreatment (owner directive): the tinted surround read as two
+ * thick black bars flanking the map, so the veil is now a single thin
+ * outline stroked on the shared keyhole square — no surround fill at all.
+ * The terminus alpha still drives the line's opacity (faint at globe
+ * scale, darker while working) and the feather slider still drives its
+ * weight (hairline to 3px), so every existing control and share-link
+ * field stays live.
+ *
  * Implementation: one fixed canvas parented into the viewer container
  * BELOW the detection surface (z-index 2 < 5) so detection's
  * mix-blend-mode still composites over the masked scene, exactly like the
- * old in-scene artifact. The mask is a radial gradient — fully transparent
- * inside the shared keyhole circle, feathering to near-opaque page black
- * outside — redrawn only on resize, tuning change, DPR change, or a
- * QUANTIZED terminus-alpha step (see below). No rAF, no per-frame paint, no
- * render-loop coupling.
+ * old in-scene artifact. The mask is one stroked square on the shared
+ * keyhole geometry — redrawn only on resize, tuning change, DPR change,
+ * or a QUANTIZED terminus-alpha step (see below). No rAF, no per-frame
+ * paint, no render-loop coupling.
  *
- * Altitude-adaptive edge terminus (owner-approved 2026-08-17, band retuned the
- * same day after a field test): the outside fill's terminus alpha is 0.94 only
- * at TRUE full-globe altitude — above 10 Mm, where the relaxed 6% keeps faint
- * stars alive in the corners — and fades QUICKLY to fully opaque black on the
- * way down, reaching solid black by 7 Mm. Every working altitude below that is
- * opaque, because there the same 6% bleed reads as smeared geometry rather
- * than atmosphere. FEATHER is untouched BY THIS RAMP — only the terminus opacity
- * moves here. (The feather's own default later moved 35 → 0 on 2026-08-22; see
- * SCOPE_FEATHER_RATIO_DEFAULT below. The two are independent.)
+ * Altitude-adaptive edge terminus: the outside fill's terminus alpha is
+ * SCOPE_OUTSIDE_ALPHA at TRUE full-globe altitude (above 10 Mm, where the
+ * corners stay airy) and deepens to SCOPE_TERMINUS_ALPHA_NEAR on the way
+ * down, reaching the working veil by 7 Mm. Every working altitude below
+ * that shares the veil, because there the map must read through the frame.
+ * FEATHER is untouched BY THIS RAMP — only the terminus opacity moves here.
+ * (The feather's own default is SCOPE_FEATHER_RATIO_DEFAULT below; the two
+ * are independent.)
  *
  * Perf contract for that ramp: the height sample is throttled AND the repaint
- * is gated on a QUANTIZED alpha step, so a full zoom gesture costs a handful
- * of 2D-canvas repaints (~12 across the whole band — the alpha span, not the
- * altitude span, sets that) and a parked camera costs none. Under the idle
- * render governor a parked camera produces no frames at all, so the sampler is
- * literally free at rest. SCOPE OFF costs even less: no sampling, and no
- * canvas work beyond the single clear on the disable transition.
+ * is gated on a QUANTIZED alpha step, so a full zoom gesture costs a bounded
+ * run of 2D-canvas repaints (~50 across the whole band — the alpha span, not
+ * the altitude span, sets that) and a parked camera costs none. Under the
+ * idle render governor a parked camera produces no frames at all, so the
+ * sampler is literally free at rest. SCOPE OFF costs even less: no sampling,
+ * and no canvas work beyond the single clear on the disable transition.
  */
 
 /** Matches the page background the emergent scope faded into. */
@@ -61,10 +72,10 @@ const SCOPE_OUTSIDE_COLOR = { r: 5, g: 5, b: 8 };
  */
 export const SCOPE_FEATHER_RATIO_DEFAULT = 0.11;
 /**
- * Terminus opacity at/above SCOPE_TERMINUS_FAR_M — slightly translucent so
- * faint stars survive in the corners at globe scale.
+ * Terminus opacity at/above SCOPE_TERMINUS_FAR_M — a faint line at globe
+ * scale.
  */
-export const SCOPE_OUTSIDE_ALPHA = 0.94;
+export const SCOPE_OUTSIDE_ALPHA = 0.35;
 /**
  * Lowest SUPPORTED terminus opacity, as a share-link percent. The band exists
  * because anything below the globe-scale terminus is not a scope any more —
@@ -73,28 +84,37 @@ export const SCOPE_OUTSIDE_ALPHA = 0.94;
  */
 export const SCOPE_TERMINUS_MIN_PCT = Math.round(SCOPE_OUTSIDE_ALPHA * 100);
 export const SCOPE_TERMINUS_MAX_PCT = 100;
-/** Terminus opacity at/below SCOPE_TERMINUS_NEAR_M — full black, no bleed. */
-export const SCOPE_TERMINUS_ALPHA_NEAR = 1;
+/**
+ * Terminus opacity at/below SCOPE_TERMINUS_NEAR_M — the working line
+ * weight's alpha. The frame is an outline, never a surround fill.
+ */
+export const SCOPE_TERMINUS_ALPHA_NEAR = 0.6;
 /**
  * Camera height at/above which the terminus stays at SCOPE_OUTSIDE_ALPHA.
- * Owner retune (2026-08-17 field test): the relaxed 6% corners belong to TRUE
- * full-globe views only — "the moment we go past roughly 10 million m in
- * altitude, looking at the world, it should start quickly fading into black".
+ * The faint corners belong to TRUE full-globe views only — below ~10 Mm the
+ * frame deepens toward the working veil.
  */
 export const SCOPE_TERMINUS_FAR_M = 10_000_000;
 /**
- * Camera height at/below which the terminus is fully opaque. The fade is
- * deliberately STEEP: 3 Mm below the far edge everything outside the scope is
- * solid black, so every working altitude (orbital, regional, city) is opaque.
+ * Camera height at/below which the terminus holds the working veil. The fade
+ * is deliberately STEEP: 3 Mm below the far edge the frame has settled, so
+ * every working altitude (orbital, regional, city) shares one veil.
  */
 export const SCOPE_TERMINUS_NEAR_M = 7_000_000;
 /**
- * Repaint granularity. The ramp spans 0.06 alpha, so 0.005 steps give ~12
+ * Repaint granularity. The ramp spans 0.25 alpha, so 0.005 steps give ~50
  * repaints across the ENTIRE 3 Mm band — the alpha span sets that count, so
  * widening the altitude band costs nothing — and zero while hovering, since a
  * still camera never crosses a step.
  */
 export const SCOPE_TERMINUS_QUANTUM = 0.005;
+/**
+ * Outline weight range in CSS px. The feather slider (0..1) maps across it,
+ * so the default feather is a hairline and a full feather is a 3px frame —
+ * never a filled surround.
+ */
+const SCOPE_LINE_MIN_PX = 1;
+const SCOPE_LINE_MAX_PX = 3;
 /** Height-sample throttle. Bounds the sampler to ~8 Hz while the camera moves. */
 const SCOPE_TERMINUS_SAMPLE_MS = 120;
 
@@ -122,10 +142,10 @@ let _paintDirty = false;
 let _coalescingPaint = false;
 
 /**
- * Smoothstep ramp from the globe-scale terminus to full black.
+ * Smoothstep ramp from the globe-scale terminus to the working veil.
  * Pure — unit-tested directly.
  * @param {number} heightM - Camera height above the ellipsoid, in metres.
- * @returns {number} Terminus alpha in [SCOPE_OUTSIDE_ALPHA, 1].
+ * @returns {number} Terminus alpha in [SCOPE_OUTSIDE_ALPHA, SCOPE_TERMINUS_ALPHA_NEAR].
  */
 export function scopeTerminusAlpha(heightM) {
   const h = Number(heightM);
@@ -165,7 +185,7 @@ export function quantizeScopeTerminusAlpha(alpha) {
  * Non-numeric input is not a value at all — it means "absent", i.e. adaptive.
  * Pure — unit-tested directly.
  * @param {*} value
- * @returns {?number} 94..100, or null for adaptive.
+ * @returns {?number} 35..100, or null for adaptive.
  */
 export function clampScopeTerminusPct(value) {
   // Anything that is not an actual number — null, undefined, '', 'abc', a
@@ -333,13 +353,16 @@ function teardownDevicePixelRatioWatch() {
 }
 
 /**
- * Compute the gradient stops for the scope mask.
+ * Compute the square frame geometry for the scope mask. The keyhole radius
+ * is the square's half-side, so the visible edge stays anchored to the
+ * shared geometry every keyhole consumer fades on.
  * Pure — unit-tested directly.
  * @param {number} width - Viewport CSS width.
  * @param {number} height - Viewport CSS height.
  * @param {number} featherRatio - Edge feather as a fraction of keyhole radius.
  * @returns {{centerX:number, centerY:number, innerR:number, outerR:number,
- *   maxR:number}|null} Geometry, or null when the viewport is degenerate.
+ *   maxR:number}|null} Centre plus inner/outer half-sides, or null when the
+ *   viewport is degenerate.
  */
 export function scopeMaskGeometry(width, height, featherRatio = _featherRatio) {
   const keyhole = getKeyholeGeometry(width, height);
@@ -394,32 +417,17 @@ function draw() {
   const geo = scopeMaskGeometry(width, height, _featherRatio);
   if (!geo) return;
   const { r, g, b } = SCOPE_OUTSIDE_COLOR;
-  if (geo.outerR - geo.innerR < 1) {
-    // Zero/near-zero feather: a radial gradient with equal radii is
-    // DEGENERATE in Canvas2D (Chromium paints nothing — browser
-    // finding). Draw the hard crop explicitly: rect minus circle, evenodd.
-    // The hard crop honors the same altitude terminus — a hard edge at city
-    // scale must be fully opaque too, not 6% translucent.
-    ctx.fillStyle = `rgba(${r},${g},${b},${_terminusAlpha})`;
-    ctx.beginPath();
-    ctx.rect(0, 0, width, height);
-    ctx.arc(geo.centerX, geo.centerY, Math.max(1, geo.innerR), 0, Math.PI * 2);
-    ctx.fill('evenodd');
-    _painted = true;
-    return;
-  }
-  const gradient = ctx.createRadialGradient(
-    geo.centerX,
-    geo.centerY,
-    geo.innerR,
-    geo.centerX,
-    geo.centerY,
-    geo.outerR,
-  );
-  gradient.addColorStop(0, `rgba(${r},${g},${b},0)`);
-  gradient.addColorStop(1, `rgba(${r},${g},${b},${_terminusAlpha})`);
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, width, height);
+  // Thin outline on the shared keyhole edge: the stroke sits exactly on the
+  // keyhole radius (the midpoint of the feather band), so the visible frame
+  // stays anchored to the geometry every keyhole consumer fades on. No
+  // surround fill — that read as two thick black bars flanking the map.
+  const half = (geo.innerR + geo.outerR) / 2;
+  const feather = Math.max(0, Math.min(1, Number(_featherRatio) || 0));
+  ctx.strokeStyle = `rgba(${r},${g},${b},${_terminusAlpha})`;
+  ctx.lineWidth =
+    SCOPE_LINE_MIN_PX +
+    Math.round(feather * (SCOPE_LINE_MAX_PX - SCOPE_LINE_MIN_PX));
+  ctx.strokeRect(geo.centerX - half, geo.centerY - half, half * 2, half * 2);
   _painted = true;
 }
 

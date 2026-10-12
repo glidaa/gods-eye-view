@@ -152,9 +152,9 @@ export class MapSourceController {
 
   /**
    * Lease the map for an imagery comparison. switchPolicy: 'preserve' (never
-   * switch) | 'esri' (switch to Esri imagery from any other stack) |
-   * 'esri-if-photoreal' (switch only when Google 3D is active). Throws while
-   * another owner holds the lease; see acquireImageryComparison().
+   * switch) | 'esri' (switch to Esri imagery from any other stack).
+   * Throws while another owner holds the lease; see
+   * acquireImageryComparison().
    */
   acquireImageryComparison(options) {
     return acquireImageryComparison(this, options);

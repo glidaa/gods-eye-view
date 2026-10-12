@@ -1,8 +1,8 @@
 import * as Cesium from 'cesium';
 
-// Attribution and service rights are documented in DATA_SOURCES.md.
-export const ESRI_ATTRIBUTION_HTML =
-  '<a href="https://www.esri.com" target="_blank" rel="noopener">Powered by Esri</a>';
+// Attribution and service rights are documented in DATA_SOURCES.md. The
+// provider credit below is the complete on-record Esri attribution; it
+// lives in the "Data attribution" lightbox, not on the map face.
 
 export function createOsmImagery() {
   return new Cesium.OpenStreetMapImageryProvider({

@@ -106,9 +106,9 @@
   transition:
     opacity 0.4s ease,
     visibility 0.4s ease;
-  --hud-color: rgba(0, 255, 255, 0.6);
-  --hud-glow: rgba(0, 255, 255, 0.4);
-  --hud-border: rgba(0, 255, 255, 0.15);
+  --hud-color: rgba(255, 255, 255, 0.92);
+  --hud-glow: rgba(255, 255, 255, 0.55);
+  --hud-border: rgba(255, 255, 255, 0.15);
 }
 
 #intel-hud.active {
@@ -270,6 +270,15 @@
   letter-spacing: 1.5px;
 }
 
+.hud-viewing {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: #ffffff;
+  opacity: 0.95;
+}
+
 /* Edge annotations (vertical text) */
 .hud-edge {
   position: absolute;
@@ -279,7 +288,7 @@
 }
 
 .hud-left-edge {
-  left: 36px;
+  left: 2px;
   top: 50%;
   transform: translateY(-50%) rotate(-90deg);
   transform-origin: left center;
@@ -289,7 +298,7 @@
 }
 
 .hud-right-edge {
-  right: 36px;
+  right: 2px;
   top: 50%;
   transform: translateY(-50%) rotate(90deg);
   transform-origin: right center;
@@ -316,7 +325,7 @@
   transform: translateX(-50%);
   border-color: rgba(255, 255, 255, 0.24);
   background: linear-gradient(90deg, rgba(0, 0, 0, 0.56), rgba(8, 26, 34, 0.5));
-  box-shadow: 0 0 24px rgba(0, 255, 255, 0.08);
+  box-shadow: 0 0 24px rgba(255, 255, 255, 0.08);
 }
 
 #intel-hud[data-variant='tactical'] .hud-top-left,

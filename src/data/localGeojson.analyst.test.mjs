@@ -46,6 +46,17 @@ test('infra analyst record: datacenter maps name, operator, capacity', () => {
     capacity: '27 MW',
     river: null,
     output: null,
+    fuel: null,
+    capacityMw: null,
+    status: null,
+    commodity: null,
+    commodityGroup: null,
+    commodities: null,
+    state: null,
+    nearestPort: null,
+    nearestPortKm: null,
+    nearestLanding: null,
+    nearestLandingKm: null,
   });
 });
 

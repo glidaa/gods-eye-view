@@ -41,8 +41,10 @@ test('transit reads the mesh floor the application resolved, through the applica
     'the DEM floor, lifted',
   );
 
-  // ...and then a rendered-mesh sample lands on the same cell, seventeen
-  // metres above bare earth, the way a photogrammetric street sits.
+  // ...and then a tileset stack takes over and a rendered-mesh sample
+  // lands on the same cell, seventeen metres above bare earth, the way a
+  // photogrammetric street sits.
+  surface.groundFloor.setMeshFloorPreferred(true);
   assert.equal(
     surface.groundFloor.reportValidatedMeshFloorCell(lat, lon, 37),
     true,
@@ -77,6 +79,7 @@ test('the catalog hands transit the same surface it hands everything else', asyn
   const lat = 30.2672;
   const lon = -97.7431;
   await surface.groundFloor.resolveGroundFloorCells([{ lat, lon }]);
+  surface.groundFloor.setMeshFloorPreferred(true);
   surface.groundFloor.reportValidatedMeshFloorCell(lat, lon, 22);
   assert.equal(
     transit._transitPartsForTest().height.requestHeight(lat, lon).height,

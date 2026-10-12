@@ -60,6 +60,21 @@ export function allocationTestArgs(file) {
   return ['--expose-gc', '--test', '--test-concurrency=1', file];
 }
 
+/**
+ * Build the parallel-suite invocation, honoring an explicit worker cap.
+ * GEV_TEST_CONCURRENCY bounds `node --test` workers (RAM + CPU) on loaded
+ * machines; absent or junk, the runner keeps Node's default. Pure —
+ * unit-tested directly.
+ */
+export function parallelTestArgs(files, env = process.env) {
+  const raw = env?.GEV_TEST_CONCURRENCY;
+  const capped = Number.parseInt(String(raw ?? ''), 10);
+  if (Number.isInteger(capped) && capped > 0) {
+    return ['--test', `--test-concurrency=${capped}`, ...files];
+  }
+  return ['--test', ...files];
+}
+
 function runTests(args) {
   const result = spawnSync(process.execPath, args, {
     cwd: process.cwd(),
@@ -72,7 +87,7 @@ function runTests(args) {
 
 export function runUnitTests() {
   const plan = buildUnitTestPlan(discoverUnitTestFiles());
-  const parallelStatus = runTests(['--test', ...plan.parallel]);
+  const parallelStatus = runTests(parallelTestArgs(plan.parallel));
   if (parallelStatus !== 0) return parallelStatus;
 
   // The GC-bracketed budgets are calibrated on Node 24 and are meaningless on

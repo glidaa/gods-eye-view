@@ -419,11 +419,12 @@ export function createGroundFloor({ terrain, signal }) {
   /** @type {Map<string, number>} coarse cell key -> rendered-surface height (m, ellipsoidal). */
   const _meshCells = new Map();
   /** @type {boolean} Whether mesh cells apply — true only in the google-3d
-   *  regime (photoreal stack). On globe stacks the rendered surface IS the
+   *  regime (a 3D-tiles stack). On globe stacks the rendered surface IS the
    *  terrain provider (Re:Earth on keyless), so the DEM is already correct
    *  there and mesh heights would float. Kept current by meshFloorSampler's
-   *  'gev:map-stack-changed' listener. Photoreal is the boot default. */
-  let _meshPreferred = true;
+   *  'gev:map-stack-changed' listener. Boots false: every shipped stack is
+   *  a globe, so no mesh regime is active until a tileset stack says so. */
+  let _meshPreferred = false;
 
   /** @param {boolean} preferred - google-3d regime active. */
   function setMeshFloorPreferred(preferred) {

@@ -120,9 +120,7 @@ export function createIngestion({
               footprint: null,
               primaryType: place.primaryType || null,
               placeTypes: Array.isArray(place.types) ? place.types : [],
-              sources: [
-                { name: 'Google Maps Places', id: place.id, retrievedAt },
-              ],
+              sources: [{ name: 'Places', id: place.id, retrievedAt }],
               validation: 'unreviewed',
               retrievedAt,
             });

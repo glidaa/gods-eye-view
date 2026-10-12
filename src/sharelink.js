@@ -14,7 +14,7 @@ import {
  * Share Links — URL Hash State Management
  *
  * Encodes camera position + style into the URL hash so links can be shared.
- * Format: #lat=37.77&lon=-122.42&alt=800&heading=0&pitch=-35&style=nvg&bloom=1&bi=84&bv=2&sharpen=0&si=65&hud=tactical&hv=1&dm=BALANCED&dd=50&da=elastic&kf=16&ko=0&cr=0&map=photoreal
+ * Format: #lat=37.77&lon=-122.42&alt=800&heading=0&pitch=-35&style=nvg&bloom=1&bi=84&bv=2&sharpen=0&si=65&hud=tactical&hv=1&dm=BALANCED&dd=50&da=elastic&kf=16&ko=0&cr=0&map=esri-imagery
  */
 
 const DEBOUNCE_MS = 500;
@@ -123,9 +123,9 @@ export class ShareLinkManager {
     // SCOPE_FEATHER_RATIO_DEFAULT in scopeMask.js and the slider's markup value.
     this._scopeFeatherPct = 11;
     // null = the altitude-adaptive terminus (the default). A number pins the
-    // outside-fill opacity as a percent, 94..100. (`sce`, 2026-08-17)
+    // outside-fill opacity as a percent, 35..100. (`sce`)
     this._scopeTerminusPct = null;
-    this._mapStack = 'photoreal';
+    this._mapStack = 'esri-imagery';
     this._layerStateProvider = null;
     this._panelStateProvider = null;
     this._styleParamStateProvider = null;
@@ -237,12 +237,12 @@ export class ShareLinkManager {
       ),
       // Absent (or non-numeric) `sce` = adaptive (null), the default behavior;
       // a value pins the terminus opacity percent, clamped into the SUPPORTED
-      // 94..100 band. `sce=0` used to survive as a sub-94 terminus — a hole in
-      // the mask — and then got written straight back out on the next update.
+      // 35..100 band. `sce=0` used to survive as a sub-band terminus — a hole
+      // in the mask — and then got written straight back out on the next update.
       scopeTerminusPct: params.has('sce')
         ? clampScopeTerminusPct(params.get('sce'))
         : null,
-      mapStack: params.get('map') || 'photoreal',
+      mapStack: params.get('map') || 'esri-imagery',
       layerState: decodedLayerState,
       layerStateInvalid:
         params.get('v') === '2' &&

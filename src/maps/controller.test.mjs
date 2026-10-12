@@ -72,7 +72,12 @@ const settle = async () => {
 const descriptor = (id) => ({ id, label: id, kind: 'imagery' });
 function publicFixture() {
   const tileset = { show: true };
-  const registry = createDefaultMapSources({ googleTileset: tileset });
+  const registry = createDefaultMapSources();
+  registry.sources.push({
+    descriptor: { id: 'mesh', label: 'mesh', kind: 'tileset' },
+    available: true,
+    tileset,
+  });
   const providers = new Map();
   for (const source of registry.sources) {
     if (!source.imagery) continue;
@@ -84,7 +89,12 @@ function publicFixture() {
       create: async () => ({ provider: { id: 'terrain' } }),
     };
   }
-  return { ...fixture(registry), registry, providers, tileset };
+  return {
+    ...fixture(registry, { initialStack: 'mesh' }),
+    registry,
+    providers,
+    tileset,
+  };
 }
 
 test('an additional imagery source needs no controller branch and owns its cached resources', async () => {
@@ -176,7 +186,7 @@ test('returning to the live provider supersedes a pending switch without rebuild
   assert.equal(env.controller.getActiveId(), 'esri-imagery');
   assert.equal(env.imagery[0], layer);
   assert.equal(env.removed.length, 0);
-  await env.controller.setStack('photoreal');
+  await env.controller.setStack('mesh');
   assert.equal(env.imagery.length, 0);
   assert.equal(env.tileset.show, true);
   await env.controller.setStack('esri-imagery');
@@ -239,17 +249,17 @@ test('slow terrain cannot overwrite a newer source and a 3D view never starts un
       });
     },
   };
-  await env.controller.setStack('photoreal');
+  await env.controller.setStack('mesh');
   assert.equal(reads, 0);
   const loading = env.controller.setStack('osm');
   await settle();
-  await env.controller.setStack('photoreal');
+  await env.controller.setStack('mesh');
   resolve({ provider: { id: 'late-terrain' } });
   await loading;
   assert.equal(env.viewer.terrainProvider, undefined);
   assert.equal(env.viewer.scene.globe.show, false);
   assert.equal(env.tileset.show, true);
-  assert.equal(env.controller.getActiveId(), 'photoreal');
+  assert.equal(env.controller.getActiveId(), 'mesh');
   env.controller.destroy();
 });
 
@@ -264,7 +274,7 @@ test('Esri construction fallback reports and attributes the source actually rend
   assert.equal(env.controller.getActiveId(), 'osm');
   assert.equal(
     env.controller.getState().lastError,
-    'Esri Satellite is unavailable; using OSM',
+    'Satellite is unavailable; using OSM',
   );
   assert.equal(env.imagery[0].provider, env.providers.get('osm'));
   assert.equal(env.credits.size, 0);
@@ -274,7 +284,9 @@ test('Esri construction fallback reports and attributes the source actually rend
 test('one Esri tile failure stays put, two fall back, and stale errors cannot replace a selection', async () => {
   const env = publicFixture();
   await env.controller.setStack('esri-imagery');
-  assert.equal(env.credits.size, 1);
+  // No stack carries an on-screen static credit; the provider's own credit
+  // line lives in the "Data attribution" lightbox instead.
+  assert.equal(env.credits.size, 0);
   const errorEvent = env.providers.get('esri-imagery').errorEvent;
   errorEvent.raise();
   await settle();
@@ -285,13 +297,13 @@ test('one Esri tile failure stays put, two fall back, and stale errors cannot re
   assert.equal(env.credits.size, 0);
   assert.equal(
     env.controller.getState().lastError,
-    'Esri Satellite tile requests failed; using OSM',
+    'Satellite tile requests failed; using OSM',
   );
   assert.equal(errorEvent.size, 0);
-  await env.controller.setStack('photoreal');
+  await env.controller.setStack('mesh');
   errorEvent.raise({ timesRetried: 9 });
   await settle();
-  assert.equal(env.controller.getActiveId(), 'photoreal');
+  assert.equal(env.controller.getActiveId(), 'mesh');
   env.controller.destroy();
 });
 
@@ -306,7 +318,7 @@ test('tooltips and rejected selection share the registry reason, including retir
   assert.deepEqual(errors, [reason]);
   assert.match(reason, /CESIUM_ION_TOKEN/);
   await env.controller.setStack('bing-road');
-  assert.equal(env.controller.getActiveId(), 'photoreal');
+  assert.equal(env.controller.getActiveId(), 'esri-imagery');
   env.controller.destroy();
 });
 
@@ -482,13 +494,13 @@ test('an imagery comparison lease rejects a second owner synchronously until rel
   );
   assert.deepEqual(await lease.ready, {
     status: 'ready',
-    activeId: 'photoreal',
+    activeId: 'mesh',
   });
   await lease.release();
   const next = env.controller.acquireImageryComparison({ owner: 'recent' });
   assert.deepEqual(await next.ready, {
     status: 'ready',
-    activeId: 'photoreal',
+    activeId: 'mesh',
   });
   await next.release();
   assert.deepEqual(env.switches, []);
@@ -496,7 +508,7 @@ test('an imagery comparison lease rejects a second owner synchronously until rel
 });
 
 test("the 'esri' policy switches from any other stack and release restores it", async () => {
-  for (const initial of ['photoreal', 'osm']) {
+  for (const initial of ['mesh', 'osm']) {
     const env = leaseFixture();
     if (initial !== env.controller.getActiveId())
       await env.controller.setStack(initial);
@@ -517,33 +529,22 @@ test("the 'esri' policy switches from any other stack and release restores it", 
   }
 });
 
-test("the 'esri-if-photoreal' policy leaves any 2D basemap alone", async () => {
-  const photoreal = leaseFixture();
-  const fromPhotoreal = photoreal.controller.acquireImageryComparison({
-    owner: 'recent',
-    switchPolicy: 'esri-if-photoreal',
-  });
-  assert.equal((await fromPhotoreal.ready).activeId, 'esri-imagery');
-  await fromPhotoreal.release();
-  assert.deepEqual(photoreal.switches, ['esri-imagery', 'photoreal']);
-  photoreal.controller.destroy();
-
-  const osm = leaseFixture();
-  await osm.controller.setStack('osm');
-  osm.switches.length = 0;
-  const fromOsm = osm.controller.acquireImageryComparison({
-    owner: 'recent',
-    switchPolicy: 'esri-if-photoreal',
-  });
-  assert.deepEqual(await fromOsm.ready, { status: 'ready', activeId: 'osm' });
-  await fromOsm.release();
-  assert.equal(osm.controller.getActiveId(), 'osm');
-  assert.deepEqual(osm.switches, []);
-  osm.controller.destroy();
+test('a retired switch policy is rejected as unknown', async () => {
+  const env = leaseFixture();
+  assert.throws(
+    () =>
+      env.controller.acquireImageryComparison({
+        owner: 'recent',
+        switchPolicy: 'esri-if-photoreal',
+      }),
+    /Unknown imagery comparison switch policy/,
+  );
+  assert.deepEqual(env.switches, []);
+  env.controller.destroy();
 });
 
 test("the 'preserve' policy never switches, whatever is active", async () => {
-  for (const initial of ['photoreal', 'esri-imagery', 'osm']) {
+  for (const initial of ['mesh', 'esri-imagery', 'osm']) {
     const env = leaseFixture();
     if (initial !== env.controller.getActiveId())
       await env.controller.setStack(initial);
@@ -609,15 +610,15 @@ test('release during acquisition lets no late activation survive', async () => {
   resolve(env.providers.get('esri-imagery'));
   assert.deepEqual(await lease.ready, {
     status: 'superseded',
-    activeId: 'photoreal',
+    activeId: 'mesh',
   });
   await releasing;
   await settle();
-  assert.equal(env.controller.getActiveId(), 'photoreal');
+  assert.equal(env.controller.getActiveId(), 'mesh');
   assert.equal(env.viewer.scene.globe.show, false);
   assert.equal(env.imagery.length, 0);
   assert.equal(env.tileset.show, true);
-  assert.deepEqual(env.switches, ['esri-imagery', 'photoreal']);
+  assert.deepEqual(env.switches, ['esri-imagery', 'mesh']);
   env.controller.destroy();
 });
 
@@ -632,7 +633,7 @@ test('release is idempotent and frees the lease for the next owner', async () =>
   assert.equal(lease.release(), first);
   await first;
   await lease.release();
-  assert.deepEqual(env.switches, ['esri-imagery', 'photoreal']);
+  assert.deepEqual(env.switches, ['esri-imagery', 'mesh']);
   const next = env.controller.acquireImageryComparison({
     owner: 'recent',
     switchPolicy: 'esri',
@@ -641,9 +642,9 @@ test('release is idempotent and frees the lease for the next owner', async () =>
   await next.release();
   assert.deepEqual(env.switches, [
     'esri-imagery',
-    'photoreal',
+    'mesh',
     'esri-imagery',
-    'photoreal',
+    'mesh',
   ]);
   env.controller.destroy();
 });
@@ -661,12 +662,12 @@ test('an unavailable comparison stack reports failure and release leaves the map
   });
   assert.deepEqual(await lease.ready, {
     status: 'failed',
-    activeId: 'photoreal',
+    activeId: 'mesh',
   });
   await lease.release();
   assert.deepEqual(env.switches, ['esri-imagery']);
   assert.deepEqual(errors, ['Esri offline']);
-  assert.equal(env.controller.getActiveId(), 'photoreal');
+  assert.equal(env.controller.getActiveId(), 'mesh');
   env.controller.destroy();
 });
 
@@ -674,7 +675,7 @@ test('a lease stays owned until its restoration settles, so a rival cannot read 
   const env = leaseFixture();
   const lease = env.controller.acquireImageryComparison({
     owner: 'recent',
-    switchPolicy: 'esri-if-photoreal',
+    switchPolicy: 'esri',
   });
   assert.equal((await lease.ready).activeId, 'esri-imagery');
   // Hold the restore switch open: the map is still on Esri while it runs.
@@ -697,7 +698,7 @@ test('a lease stays owned until its restoration settles, so a rival cannot read 
   );
   finishRestore();
   await releasing;
-  assert.equal(env.controller.getActiveId(), 'photoreal');
+  assert.equal(env.controller.getActiveId(), 'mesh');
   env.controller.setStack = setStack;
   const next = env.controller.acquireImageryComparison({
     owner: 'nepal',
@@ -708,12 +709,12 @@ test('a lease stays owned until its restoration settles, so a rival cannot read 
     activeId: 'esri-imagery',
   });
   await next.release();
-  assert.equal(env.controller.getActiveId(), 'photoreal');
+  assert.equal(env.controller.getActiveId(), 'mesh');
   assert.deepEqual(env.switches, [
     'esri-imagery',
-    'photoreal',
+    'mesh',
     'esri-imagery',
-    'photoreal',
+    'mesh',
   ]);
   env.controller.destroy();
 });
@@ -730,9 +731,9 @@ test('subscribe hears every settled activation — silent switches, fallbacks an
   assert.deepEqual(heard, [['esri-imagery', 'ready']]);
   // A silent switch mutes onChange but not the subscription.
   const changesBefore = env.changes.length;
-  await env.controller.setStack('photoreal', { silent: true });
+  await env.controller.setStack('mesh', { silent: true });
   assert.equal(env.changes.length, changesBefore, 'onChange stays silent');
-  assert.deepEqual(heard.at(-1), ['photoreal', 'ready']);
+  assert.deepEqual(heard.at(-1), ['mesh', 'ready']);
   // A subscriber that throws does not stop the others.
   const noisy = env.controller.subscribe(() => {
     throw new Error('listener failed');
@@ -749,7 +750,7 @@ test('subscribe hears every settled activation — silent switches, fallbacks an
   assert.deepEqual(heard.at(-1), ['esri-imagery', 'ready']);
   noisy();
   off();
-  await env.controller.setStack('photoreal');
+  await env.controller.setStack('mesh');
   assert.equal(heard.length, 3, 'unsubscribed listeners hear nothing');
   env.controller.destroy();
 
@@ -798,12 +799,12 @@ test('each switch generation reports its origin: an outside setStack is manual, 
   assert.equal(env.controller.getSwitchOrigin(), 'automatic');
   assert.equal(env.controller.getState().switchOrigin, 'automatic');
   // A silent switch from outside is still the caller's choice.
-  await env.controller.setStack('photoreal', { silent: true });
+  await env.controller.setStack('mesh', { silent: true });
   assert.equal(env.controller.getSwitchOrigin(), 'manual');
   assert.deepEqual(heard, [
     ['esri-imagery', 'manual'],
     ['osm', 'automatic'],
-    ['photoreal', 'manual'],
+    ['mesh', 'manual'],
   ]);
   env.controller.destroy();
 

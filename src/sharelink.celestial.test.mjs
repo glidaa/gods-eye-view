@@ -192,7 +192,7 @@ test('camera-only, partial, and malformed panel shares remain valid incoming sta
 // Stack panel. Nothing is owed to a link that carried them — no build with
 // either one ever shipped publicly — so the parser no longer knows them, and
 // each takes the ordinary unknown path: an unrecognized panel token is skipped,
-// and an unrecognized stack id lands on the controller's photoreal fallback
+// and an unrecognized stack id lands on the controller's Esri fallback
 // (pinned live in `scripts/qa-map-source-tray.mjs`). The camera half of such a
 // link must still restore.
 test('a retired-vocabulary link degrades to the unknown paths instead of failing', () => {
@@ -331,18 +331,18 @@ test('keyhole fade controls default and round-trip as normalized percentages', (
 
 // ── `sce` is a BAND, not a free number (review round 2) ───────────────────────
 //
-// The terminus is documented and supported as 94..100. Parsing clamped to
-// 0..100, so `sce=0` produced an unsupported sub-94 terminus — a hole in the
+// The terminus is documented and supported as 35..100. Parsing clamped to
+// 0..100, so `sce=0` produced an unsupported sub-band terminus — a hole in the
 // mask, not a scope — and the next hash write serialized it straight back out.
 
-test('sce is clamped into the supported 94..100 band on the way in', () => {
+test('sce is clamped into the supported 35..100 band on the way in', () => {
   assert.equal(makeManager('#lat=10&lon=20&sce=97').parseInitialHash().scopeTerminusPct, 97);
-  assert.equal(makeManager('#lat=10&lon=20&sce=94').parseInitialHash().scopeTerminusPct, 94);
+  assert.equal(makeManager('#lat=10&lon=20&sce=35').parseInitialHash().scopeTerminusPct, 35);
   assert.equal(makeManager('#lat=10&lon=20&sce=100').parseInitialHash().scopeTerminusPct, 100);
-  assert.equal(makeManager('#lat=10&lon=20&sce=0').parseInitialHash().scopeTerminusPct, 94,
-    'sce=0 must not create a sub-94 terminus');
-  assert.equal(makeManager('#lat=10&lon=20&sce=93').parseInitialHash().scopeTerminusPct, 94);
-  assert.equal(makeManager('#lat=10&lon=20&sce=-40').parseInitialHash().scopeTerminusPct, 94);
+  assert.equal(makeManager('#lat=10&lon=20&sce=0').parseInitialHash().scopeTerminusPct, 35,
+    'sce=0 must not create a sub-band terminus');
+  assert.equal(makeManager('#lat=10&lon=20&sce=34').parseInitialHash().scopeTerminusPct, 35);
+  assert.equal(makeManager('#lat=10&lon=20&sce=-40').parseInitialHash().scopeTerminusPct, 35);
   assert.equal(makeManager('#lat=10&lon=20&sce=500').parseInitialHash().scopeTerminusPct, 100);
   assert.equal(makeManager('#lat=10&lon=20&sce=96.6').parseInitialHash().scopeTerminusPct, 97,
     'fractional percents round into the band');
@@ -360,7 +360,7 @@ test('serialization writes only in-band sce values, and omits an adaptive one', 
   manager.onToggleChange(false, false, { scopeTerminusPct: 0 });
   clearTimeout(manager._debounceTimer);
   manager._updateHash();
-  assert.equal(new URLSearchParams(window.location.hash.slice(1)).get('sce'), '94',
+  assert.equal(new URLSearchParams(window.location.hash.slice(1)).get('sce'), '35',
     'an out-of-band value must be floored on write, not round-tripped');
 
   manager.onToggleChange(false, false, { scopeTerminusPct: 500 });

@@ -1,0 +1,121 @@
+<!-- Fullscreen help: everything the app can do and how to ask for it.
+       Opened from the TRANSPORT menu; ESC, backdrop click, or the close
+       button dismisses. -->
+<aside
+  id="help-overlay"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="help-title"
+  hidden
+>
+  <div class="help-card" role="document">
+    <header class="help-header">
+      <div>
+        <span class="help-kicker">TRANSPORT · GUIDE</span>
+        <h2 id="help-title">What you can do</h2>
+      </div>
+      <button id="help-close" type="button" aria-label="Close help">
+        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+      </button>
+    </header>
+    <div class="help-body">
+      <section aria-labelledby="help-views">
+        <h3 id="help-views">Views</h3>
+        <ul>
+          <li>
+            <strong>Locations</strong> — the icon dock at bottom left jumps
+            between curated displays (NSW, VIC, Sydney, Melbourne, Newcastle).
+            The menu button lists every display.
+          </li>
+          <li>
+            <strong>Missions</strong> — the first-run launcher offers Live
+            contacts, Space missions, and Environmental (NSW power, ports,
+            mines, earthquakes, fires). Reopen it any time from a fresh tab.
+          </li>
+          <li>
+            <strong>Map stacks</strong> — Visual presets switch the basemap
+            between Esri satellite, OSM, and Bing (Bing needs a Cesium ion key
+            in Provider settings).
+          </li>
+          <li>
+            <strong>Shortcuts</strong> — the button row under TRANSPORT toggles
+            LOCATION, DATA LAYERS and SCENES; the top-center apps button holds
+            globe actions (clear layers, share, tilt, north-up, reset).
+          </li>
+        </ul>
+      </section>
+      <section aria-labelledby="help-layers">
+        <h3 id="help-layers">Layers</h3>
+        <ul>
+          <li>
+            <strong>DATA LAYERS</strong> (left) lists everything toggleable:
+            aircraft, vessels, earthquakes, fires, Australian power plants,
+            ports and mines, CCTV cameras, radio stations, satellites, dams,
+            datacenters, submarine cables and more.
+          </li>
+          <li>
+            Enabled layers draw on the globe immediately; the bottom bar counts
+            what is showing.
+          </li>
+          <li>
+            <strong>CLEAR</strong> / the layers-clear globe button turns every
+            data layer off at once.
+          </li>
+        </ul>
+      </section>
+      <section aria-labelledby="help-ask">
+        <h3 id="help-ask">Ask the map</h3>
+        <ul>
+          <li>
+            <strong>Voice</strong> — press the mic in Agent Chat (or the dock
+            mic) to talk: try “fly to Sydney”, “show power plants”, “switch to
+            OSM”, “next CCTV camera”, “track that aircraft”, “annotate this
+            substation”.
+          </li>
+          <li>
+            <strong>Chat</strong> — type in Agent Chat whenever voice is off; it
+            rides the same agent turn.
+          </li>
+          <li>
+            The agent can fly the camera, toggle layers and panels, switch
+            styles and stacks, drive CCTV, radio and the cockpit, annotate,
+            track contacts, and look up satellite passes.
+          </li>
+        </ul>
+      </section>
+      <section aria-labelledby="help-imagery">
+        <h3 id="help-imagery">Imagery and cameras</h3>
+        <ul>
+          <li>
+            <strong>CCTV / IMAGES</strong> (right) plays a random slideshow of
+            live area cameras. Pick any camera to hold it; AUTO HOP resumes the
+            slideshow.
+          </li>
+          <li>
+            <strong>RECENT IMAGERY</strong> — draw a box to list the last 30
+            days of satellite passes, pin days, and swipe before/after with the
+            divider.
+          </li>
+        </ul>
+      </section>
+      <section aria-labelledby="help-share">
+        <h3 id="help-share">Share and keys</h3>
+        <ul>
+          <li>
+            <strong>Copy share link</strong> (top bar, menu, or globe button)
+            copies a link that restores this exact view, layers and panels.
+          </li>
+          <li>
+            <strong>Provider settings</strong> (POWER UP chip, bottom right)
+            adds keys for voice, live ships, fires, traffic and more. The globe
+            flies keyless without them.
+          </li>
+          <li>
+            <strong>ESC</strong> closes dialogs and cancels tools;
+            <strong>C</strong> exits the cockpit.
+          </li>
+        </ul>
+      </section>
+    </div>
+  </div>
+</aside>

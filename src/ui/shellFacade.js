@@ -1421,6 +1421,10 @@ export class ShellFacade {
     return this._locationNavigation.resetToGlobeView(...args);
   }
 
+  flyToView(...args) {
+    return this._locationNavigation.flyToView(...args);
+  }
+
   /**
    * Displays a temporary toast notification for 2 seconds.
    * @param {string} message - Text to show in the toast.

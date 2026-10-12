@@ -56,7 +56,7 @@
 #tilt-map-view[aria-pressed='true'] {
   border-color: var(--accent);
   color: var(--accent);
-  box-shadow: 0 0 14px rgba(0, 212, 255, 0.18);
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.18);
 }
 
 #north-up-view {
@@ -80,6 +80,59 @@
   transition: transform var(--transition-fast);
 }
 
+/* Globe actions dropdown: centered under the single menu button. Higher
+   specificity than `#top-center-actions button` so items render as rows. */
+#top-center-actions #globe-actions-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  min-width: 190px;
+}
+
+#top-center-actions #globe-actions-menu button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  height: auto;
+  padding: 8px 12px 8px 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: rgba(245, 247, 250, 0.92);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.8px;
+  text-align: left;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+#top-center-actions #globe-actions-menu button:hover,
+#top-center-actions #globe-actions-menu button:focus-visible {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  transform: none;
+}
+
+#top-center-actions #globe-actions-menu button:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: -2px;
+}
+
+#top-center-actions #globe-actions-menu .material-symbols-outlined,
+#top-center-actions #globe-actions-menu .share-icon {
+  font-size: 17px;
+  flex: none;
+}
+
+#top-center-actions #globe-actions-menu .globe-action-label {
+  white-space: nowrap;
+}
+
 #global-loading-status {
   position: fixed;
   top: 74px;
@@ -91,11 +144,11 @@
   max-width: calc(100vw - 32px);
   padding: 6px 10px;
   border-radius: 7px;
-  border: 1px solid rgba(0, 212, 255, 0.24);
+  border: 1px solid rgba(255, 255, 255, 0.24);
   background: rgba(3, 10, 18, 0.78);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  color: rgba(170, 252, 255, 0.92);
+  color: rgba(228, 228, 228, 0.92);
   font-family: var(--font-mono);
   font-size: 8px;
   letter-spacing: 1.35px;
@@ -103,20 +156,20 @@
   transform: translateX(-50%);
   box-shadow:
     0 8px 24px rgba(0, 0, 0, 0.34),
-    0 0 14px rgba(0, 212, 255, 0.08);
+    0 0 14px rgba(255, 255, 255, 0.08);
   pointer-events: none;
 }
 #global-loading-status[hidden] {
   display: none;
 }
 #global-loading-label {
-  color: rgba(184, 244, 255, 0.92);
+  color: rgba(227, 227, 227, 0.92);
 }
 #global-loading-detail {
   min-width: 34px;
   max-width: min(220px, 38vw);
   overflow: hidden;
-  color: #00e1ff;
+  color: #ffffff;
   font-weight: 600;
   letter-spacing: 1.6px;
   text-align: right;
@@ -162,10 +215,10 @@
   color: #ffd488;
 }
 #global-loading-status[data-state='acquiring'] {
-  border-color: rgba(0, 212, 255, 0.42);
+  border-color: rgba(255, 255, 255, 0.42);
   box-shadow:
     0 8px 24px rgba(0, 0, 0, 0.34),
-    0 0 18px rgba(0, 212, 255, 0.12);
+    0 0 18px rgba(255, 255, 255, 0.12);
 }
 
 .share-icon {
@@ -185,11 +238,11 @@
   gap: 10px;
   padding: 6px 10px;
   border-radius: 7px;
-  border: 1px solid rgba(0, 212, 255, 0.24);
+  border: 1px solid rgba(255, 255, 255, 0.24);
   background: rgba(3, 10, 18, 0.78);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  color: rgba(170, 252, 255, 0.92);
+  color: rgba(228, 228, 228, 0.92);
   font-family: var(--font-mono);
   font-size: 8px;
   letter-spacing: 1.35px;
@@ -201,7 +254,7 @@
     transform 0.22s ease;
   box-shadow:
     0 8px 24px rgba(0, 0, 0, 0.34),
-    0 0 14px rgba(0, 212, 255, 0.08);
+    0 0 14px rgba(255, 255, 255, 0.08);
 }
 
 /* Stacked below the traffic chip so both can show at once */
@@ -217,12 +270,12 @@
 
 #traffic-sync-label,
 #cctv-sync-label {
-  color: rgba(184, 244, 255, 0.92);
+  color: rgba(227, 227, 227, 0.92);
 }
 
 #traffic-sync-progress,
 #cctv-sync-progress {
-  color: #00e1ff;
+  color: #ffffff;
   font-weight: 600;
   letter-spacing: 1.6px;
   min-width: 34px;
@@ -407,7 +460,7 @@
     opacity 0.3s ease,
     visibility 0.3s ease,
     transform 0.3s ease;
-  box-shadow: 0 0 20px rgba(0, 212, 255, 0.15);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.15);
 }
 
 #toast.visible {

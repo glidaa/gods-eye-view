@@ -20,6 +20,14 @@ import { LocationNavigation } from './locationNavigation.js';
 import { bindClearLayersControl } from './layers.js';
 import { bindCameraOrientationControls } from './cameraOrientationControls.js';
 import { createMapSourceControls } from './mapSource.js';
+import { createNswViewsWidget } from './nswViews.js';
+import {
+  createTransportBars,
+  formatTransportCoords,
+  formatLayerCounts,
+} from './transportBars.js';
+import { createGlobeActionsMenu } from './globeActionsMenu.js';
+import { createPanelQuickRow } from './panelQuickRow.js';
 import { STYLES } from './effects.js';
 
 import * as Cesium from 'cesium';
@@ -537,6 +545,10 @@ export class StyleManager extends ShellFacade {
     });
     this._initUI();
     this._initMapStackControl();
+    this._initNswViews();
+    this._initTransportBars();
+    this._initGlobeActionsMenu();
+    this._initPanelQuickRow();
     this._initPanelChrome();
     this._initLeftPanelAdaptiveLayout();
     this._initRightPanelAdaptiveLayout();
@@ -692,6 +704,75 @@ export class StyleManager extends ShellFacade {
       onStateChanged: () => this._syncShareState(),
       onError: (message) => this._showToast(message),
     });
+  }
+
+  /**
+   * Mounts the NSW demo-display dock. The widget renders immediately but
+   * stays disabled until the data manager connects (see attachDataManager).
+   * @returns {void}
+   */
+  _initNswViews() {
+    const container = document.getElementById('nsw-views');
+    if (!container) return;
+    this._nswViews?.destroy();
+    this._nswViews = createNswViewsWidget({
+      container,
+      flyToView: (view) => this.flyToView(view),
+    });
+  }
+
+  /**
+   * Mounts the top TRANSPORT bar (menu + notifications) and the bottom
+   * unifying status bar. Status reads live camera/map/layer state each
+   * poll; toasts feed the notification tray via ShellFeedback.
+   * @returns {void}
+   */
+  _initTransportBars() {
+    this._transportBars?.destroy();
+    this._transportBars = createTransportBars({
+      getStatus: () => {
+        const camera = this.getCameraState?.() || null;
+        const layers = this._dataManager?.getAll?.() || [];
+        const shown = layers.filter((layer) => layer?.enabled).length;
+        return {
+          coords: camera
+            ? formatTransportCoords(camera.lat, camera.lon, camera.alt)
+            : '--',
+          stack:
+            this.mapStackController?.getActiveStack?.()?.label ||
+            this.mapStackController?.getActiveId?.() ||
+            '—',
+          layers: formatLayerCounts(shown, layers.length),
+        };
+      },
+    });
+  }
+
+  /**
+   * Mounts the top-center globe actions menu. The action buttons keep
+   * their own bindings; this only owns the dropdown open/close behavior.
+   * @returns {void}
+   */
+  _initGlobeActionsMenu() {
+    this._globeActionsMenu?.destroy();
+    this._globeActionsMenu = createGlobeActionsMenu();
+  }
+
+  /**
+   * Mounts the left-stack panel quick row (LOCATION / DATA LAYERS /
+   * SCENES). Buttons delegate to each panel's own disclosure toggle.
+   * @returns {void}
+   */
+  _initPanelQuickRow() {
+    this._panelQuickRow?.destroy();
+    this._panelQuickRow = createPanelQuickRow();
+  }
+
+  /** @inheritdoc — plus connect the NSW views dock to the layer manager. */
+  attachDataManager(...args) {
+    const result = super.attachDataManager(...args);
+    this._nswViews?.connect?.(args[0] || null);
+    return result;
   }
 
   /**
@@ -906,6 +987,8 @@ export class StyleManager extends ShellFacade {
         _cctvProjectionBtn: this._cctvProjectionBtn,
         _cctvQualityChip: this._cctvQualityChip,
         _cctvSelect: this._cctvSelect,
+        _cctvSettingsBtn: this._cctvSettingsBtn,
+        _cctvCalibrationBlock: this._cctvCalibrationBlock,
         _cctvSourceBadge: this._cctvSourceBadge,
         _cctvSummary: this._cctvSummary,
         _cctvSyncChip: this._cctvSyncChip,
@@ -1475,6 +1558,14 @@ export class StyleManager extends ShellFacade {
 
     this._displayBindings.destroy();
     this._mapSourceControls?.destroy();
+    this._nswViews?.destroy();
+    this._nswViews = null;
+    this._transportBars?.destroy();
+    this._transportBars = null;
+    this._globeActionsMenu?.destroy();
+    this._globeActionsMenu = null;
+    this._panelQuickRow?.destroy();
+    this._panelQuickRow = null;
     this._cameraOrientationControls?.destroy();
     this._clearLayersControl?.destroy();
     this._cctvControls?.destroy();

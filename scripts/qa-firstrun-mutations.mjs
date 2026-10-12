@@ -30,7 +30,10 @@ const TESTS = ['src/firstRunExperience.test.mjs', 'src/standalone/startupChrome.
 const FILES = {
   keyboard: path.join(ROOT, 'src', 'ui', 'surfaceKeyboard.js'),
   module: path.join(ROOT, 'src', 'firstRunExperience.js'),
-  html: path.join(ROOT, 'index.html'),
+  // Launcher markup lives in the welcome template (inlined into index.html at
+  // build); the unit pins read it through expandApplicationHtml, so the
+  // mutations must edit the template source, not the placeholder.
+  html: path.join(ROOT, 'src', 'ui', 'templates', 'welcome.html'),
   css: path.join(ROOT, 'style.css'),
   voiceInstructions: path.join(ROOT, 'server/providers/openai/instructions.js'),
   voiceTools: path.join(ROOT, 'server/providers/openai/tools.js'),
@@ -240,20 +243,26 @@ const MUTATIONS = [
   {
     defect: 'ENVIRONMENTAL drops the keyless earthquakes that carry it without a key',
     file: 'module',
-    from: "layerIds: Object.freeze(['earthquakes', 'local-firms']),",
-    to: "layerIds: Object.freeze(['local-firms']),",
+    from: "    layerIds: Object.freeze([\n      'earthquakes',\n      'local-firms',\n",
+    to: "    layerIds: Object.freeze([\n      'local-firms',\n",
   },
   {
     defect: 'FIRMS is dropped again from the tile whose subcopy promises it',
     file: 'module',
-    from: "layerIds: Object.freeze(['earthquakes', 'local-firms']),",
-    to: "layerIds: Object.freeze(['earthquakes']),",
+    from: "    layerIds: Object.freeze([\n      'earthquakes',\n      'local-firms',\n",
+    to: "    layerIds: Object.freeze([\n      'earthquakes',\n",
+  },
+  {
+    defect: 'the NSW mission loses its regional framing and pulls out to the globe',
+    file: 'module',
+    from: "    view: Object.freeze({ lat: -32.5, lon: 147.0, alt: 1700000 }),\n",
+    to: '',
   },
   {
     defect: 'the tile stops promising the fires it actually turns on',
     file: 'html',
-    from: '<small>Live earthquakes and active fires, from USGS and NASA</small>',
-    to: '<small>Live earthquakes worldwide, straight from USGS</small>',
+    from: '<small>NSW power, ports and mines, live earthquakes and active fires</small>',
+    to: '<small>NSW power, ports and mines plus live earthquakes</small>',
   },
   {
     defect: "the owner-authored first-run line is quietly rewritten",
@@ -268,9 +277,9 @@ const MUTATIONS = [
     to: '    // (note removed)',
   },
   {
-    defect: 'the globe missions never pull the camera out',
+    defect: 'the globe missions never move the camera',
     file: 'module',
-    from: '    .then(() => flyToGlobe())',
+    from: "    .then(() =>\n      mission.view && flyToView ? flyToView(mission.view) : flyToGlobe(),\n    )",
     to: '    .then(() => null)',
   },
   {

@@ -180,11 +180,10 @@ function geocodePayload({ lat, lon, types, label }) {
   };
 }
 
-function installGoogleMocks(t, handler) {
+function installGeocodeMocks(t, handler) {
   const originalWindow = globalThis.window;
   const originalFetch = globalThis.fetch;
   globalThis.window = {
-    __GOOGLE_MAPS_API_KEY__: 'unit-test-key',
     setTimeout: globalThis.setTimeout,
     clearTimeout: globalThis.clearTimeout,
   };
@@ -198,9 +197,12 @@ function installGoogleMocks(t, handler) {
 
 test('ask-side admin bypass: "the Texas Capitol" recovers near-view despite a far state-typed geocode', async (t) => {
   const calls = [];
-  installGoogleMocks(t, async (url) => {
+  installGeocodeMocks(t, async (url) => {
     calls.push(String(url));
-    if (String(url).startsWith('https://maps.googleapis.com/')) {
+    if (String(url).startsWith('https://photon.komoot.io/')) {
+      return { ok: true, json: async () => ({ features: [] }) };
+    }
+    if (String(url).startsWith('/api/geocode')) {
       return { json: async () => geocodePayload({
         lat: 31.0000,
         lon: -99.0000,
@@ -228,14 +230,17 @@ test('ask-side admin bypass: "the Texas Capitol" recovers near-view despite a fa
   assert.ok(resolved);
   assert.equal(resolved.source, 'places');
   assert.deepEqual([resolved.lat, resolved.lon], [30.2747, -97.7404]);
-  assert.equal(calls.length, 2, 'admin result types must not suppress near-view recovery');
+  assert.equal(calls.length, 3, 'admin result types must not suppress near-view recovery');
 });
 
 test('ask-side admin bypass: explicit "state of Texas" skips recovery and proximity gating', async (t) => {
   const calls = [];
-  installGoogleMocks(t, async (url) => {
+  installGeocodeMocks(t, async (url) => {
     calls.push(String(url));
-    assert.match(String(url), /^https:\/\/maps\.googleapis\.com\/maps\/api\/geocode/);
+    if (String(url).startsWith('https://photon.komoot.io/')) {
+      return { ok: true, json: async () => ({ features: [] }) };
+    }
+    assert.match(String(url), /^\/api\/geocode\?/);
     return { json: async () => geocodePayload({
       lat: 31.0000,
       lon: -99.0000,
@@ -252,7 +257,7 @@ test('ask-side admin bypass: explicit "state of Texas" skips recovery and proxim
   assert.ok(resolved, 'the explicit state ask keeps its legitimate far centroid');
   assert.equal(resolved.source, 'geocode');
   assert.deepEqual([resolved.lat, resolved.lon], [31, -99]);
-  assert.equal(calls.length, 1, 'explicit state scope bypasses near-view recovery');
+  assert.equal(calls.length, 2, 'explicit state scope bypasses near-view recovery');
 });
 
 for (const fixture of [
@@ -271,9 +276,12 @@ for (const fixture of [
 ]) {
   test(`ask-side admin bypass: trailing name "${fixture.target}" remains guarded`, async (t) => {
     const calls = [];
-    installGoogleMocks(t, async (url) => {
+    installGeocodeMocks(t, async (url) => {
       calls.push(String(url));
-      if (String(url).startsWith('https://maps.googleapis.com/')) {
+      if (String(url).startsWith('https://photon.komoot.io/')) {
+      return { ok: true, json: async () => ({ features: [] }) };
+    }
+    if (String(url).startsWith('/api/geocode')) {
         return { json: async () => geocodePayload({
           lat: fixture.lat,
           lon: fixture.lon,
@@ -291,15 +299,18 @@ for (const fixture of [
     });
 
     assert.equal(resolved, null, 'a recovery miss continues through the proximity gate');
-    assert.equal(calls.length, 2, 'a proper name ending in State must try near-view recovery');
+    assert.equal(calls.length, 3, 'a proper name ending in State must try near-view recovery');
   });
 }
 
 test('ask-side admin bypass: bare "Texas" remains on the guarded recovery path', async (t) => {
   const calls = [];
-  installGoogleMocks(t, async (url) => {
+  installGeocodeMocks(t, async (url) => {
     calls.push(String(url));
-    if (String(url).startsWith('https://maps.googleapis.com/')) {
+    if (String(url).startsWith('https://photon.komoot.io/')) {
+      return { ok: true, json: async () => ({ features: [] }) };
+    }
+    if (String(url).startsWith('/api/geocode')) {
       return { json: async () => geocodePayload({
         lat: 31.0000,
         lon: -99.0000,
@@ -317,7 +328,7 @@ test('ask-side admin bypass: bare "Texas" remains on the guarded recovery path',
   });
 
   assert.equal(resolved, null, 'a recovery miss continues through the proximity gate');
-  assert.equal(calls.length, 2, 'bare state names are not an explicit admin-scoped ask');
+  assert.equal(calls.length, 3, 'bare state names are not an explicit admin-scoped ask');
 });
 
 test('ask-side admin bypass: admin level 2/3 result types never grant a township bypass', async (t) => {
@@ -326,9 +337,12 @@ test('ask-side admin bypass: admin level 2/3 result types never grant a township
     ['FB-3 township level 3 fixture', ['administrative_area_level_3', 'locality', 'political']],
   ]);
   const calls = [];
-  installGoogleMocks(t, async (url) => {
+  installGeocodeMocks(t, async (url) => {
     calls.push(String(url));
-    if (String(url).startsWith('https://maps.googleapis.com/')) {
+    if (String(url).startsWith('https://photon.komoot.io/')) {
+      return { ok: true, json: async () => ({ features: [] }) };
+    }
+    if (String(url).startsWith('/api/geocode')) {
       const query = new URL(String(url)).searchParams.get('address');
       return { json: async () => geocodePayload({
         lat: 39.7817,
@@ -379,8 +393,11 @@ function installCapitolMocks(t, elements, components = [
   { long_name: 'Washington', types: ['locality', 'political'] },
   { long_name: 'Capitol Hill', types: ['neighborhood', 'political'] },
 ]) {
-  installGoogleMocks(t, async (url) => {
-    if (String(url).startsWith('https://maps.googleapis.com/')) {
+  installGeocodeMocks(t, async (url) => {
+    if (String(url).startsWith('https://photon.komoot.io/')) {
+      return { ok: true, json: async () => ({ features: [] }) };
+    }
+    if (String(url).startsWith('/api/geocode')) {
       return { json: async () => ({ status: 'OK', results: [{
         formatted_address: 'Washington, DC 20004, USA',
         types: ['establishment', 'landmark', 'point_of_interest', 'tourist_attraction'],
@@ -454,11 +471,11 @@ function photonFeature({ name, lat, lon, tags = {}, extent = null, ...rest }) {
 
 const GOOGLE_FOUND_NOTHING = { ok: true, json: async () => ({ status: 'ZERO_RESULTS', results: [] }) };
 
-test('keyless: a key that geocodes to nothing still anchors the annotation', async (t) => {
+test('keyless: a Photon hit still anchors the annotation', async (t) => {
   const requests = [];
-  installGoogleMocks(t, async (url) => {
+  installGeocodeMocks(t, async (url) => {
     requests.push(String(url));
-    if (String(url).startsWith('https://maps.googleapis.com/')) return GOOGLE_FOUND_NOTHING;
+    assert.match(String(url), /^https:\/\/photon\.komoot\.io\/api\/\?/);
     return {
       ok: true,
       json: async () => ({
@@ -483,10 +500,9 @@ test('keyless: a key that geocodes to nothing still anchors the annotation', asy
     target: 'Lady Bird Lake',
   });
 
-  assert.ok(resolved, 'a Google miss must not leave the annotation unplaced');
+  assert.ok(resolved, 'a Photon hit must place the annotation');
   assert.equal(resolved.source, 'geocode');
   assert.deepEqual([resolved.lat, resolved.lon], [30.25, -97.73]);
-  // The label is shortened the same way a Google `formatted_address` is.
   assert.equal(resolved.label, 'Lady Bird Lake');
   // Photon's extent reaches the framing code in the Places `{low,high}` shape,
   // right way up — this is what sizes a grounds disc and the flyTo box.
@@ -494,9 +510,8 @@ test('keyless: a key that geocodes to nothing still anchors the annotation', asy
     low: { latitude: 30.24, longitude: -97.8 },
     high: { latitude: 30.28, longitude: -97.68 },
   });
-  // Google is asked first and exactly once; one Photon call answers it.
-  assert.equal(requests.filter((url) => url.includes('maps.googleapis.com')).length, 1);
-  assert.equal(requests.filter((url) => url.includes('photon.komoot.io')).length, 1);
+  // Photon answers first try; nothing else is asked.
+  assert.equal(requests.length, 1);
 });
 
 test('keyless: OSM matching uses the feature\'s canonical name, not the user\'s words', async (t) => {
@@ -510,7 +525,7 @@ test('keyless: OSM matching uses the feature\'s canonical name, not the user\'s 
   });
   const monument = squareWay(ANCHOR, 5, 5, 300, { tourism: 'artwork', name: 'Tejano Monument' });
 
-  installGoogleMocks(t, async (url, init) => {
+  installGeocodeMocks(t, async (url, init) => {
     const href = String(url);
     if (href.startsWith('https://maps.googleapis.com/')) return GOOGLE_FOUND_NOTHING;
     if (href.startsWith('/api/google/text-search')) return { ok: true, json: async () => ({ places: [] }) };
@@ -573,7 +588,7 @@ test('keyless: a Photon outage is not remembered as "no such place"', async (t) 
   };
   let photonReachable = false;
   const requests = [];
-  installGoogleMocks(t, async (url) => {
+  installGeocodeMocks(t, async (url) => {
     requests.push(String(url));
     if (String(url).startsWith('https://maps.googleapis.com/')) return GOOGLE_FOUND_NOTHING;
     if (!photonReachable) throw new Error('network down');

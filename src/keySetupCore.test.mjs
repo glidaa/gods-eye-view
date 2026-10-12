@@ -58,18 +58,18 @@ test('external ownership uses boot provenance even when store and shell values m
 
 test('the status payload reports presence without any credential material', () => {
   const env = {
-    GOOGLE_MAPS_API_KEY: 'AIzaSyFakeFakeFakeFake1234',
+    OPENAI_API_KEY: 'sk-fakeFakeFakeFake1234',
     OPENSKY_CLIENT_ID: 'client-id-abcdef',
     // Secret missing: the OpenSky pair must read as NOT set.
   };
   const status = keySetupStatus(env);
   assert.equal(status.total, KEY_SETUP_KEYS.filter((key) => !key.hidden).length);
-  const google = status.keys.find((key) => key.id === 'google-maps');
-  assert.equal(google.set, true);
+  const openai = status.keys.find((key) => key.id === 'openai');
+  assert.equal(openai.set, true);
   const opensky = status.keys.find((key) => key.id === 'opensky');
   assert.equal(opensky.set, false, 'half a credential pair is not configured');
   const serialized = JSON.stringify(status);
-  assert.ok(!serialized.includes('AIzaSyFakeFakeFakeFake1234'), 'a value leaked into status');
+  assert.ok(!serialized.includes('sk-fakeFakeFakeFake1234'), 'a value leaked into status');
   assert.ok(!serialized.includes('client-id-abcdef'), 'a value leaked into status');
   assert.ok(!serialized.includes('1234'), 'a credential suffix leaked into status');
   assert.ok(!serialized.includes('abcdef'), 'a credential suffix leaked into status');
@@ -352,7 +352,7 @@ test('server Google key remains supported without appearing in setup or its miss
   assert.deepEqual(status, keySetupStatus({}));
   assert.equal(status.keys.some((key) => key.id === 'google-maps-server'), false);
   assert.equal(keySetupRequirement('google-maps-server'), '');
-  assert.equal(status.keys.find((key) => key.id === 'google-maps').title, 'GOOGLE MAPS');
+  assert.equal(status.keys.find((key) => key.id === 'openai').title, 'OPENAI');
   const allVisibleConfigured = Object.fromEntries(status.keys.flatMap((key) =>
     key.envVars.map((name) => [name, 'configured-fixture']),
   ));

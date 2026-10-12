@@ -82,7 +82,7 @@ export const ACTION_DESCRIPTIONS = {
       properties: {
         layerId: {
           description:
-            'Common-name mapping for the non-obvious ids: space mission(s) → rocket-launches; fires/wildfires/active fires → local-firms (NASA FIRMS); ships/vessels/boats → ais-live-vessels; undersea/submarine cables → telegeography-submarine-cables; datacenters → local-datacenters; dams → local-dams; bikes/bike share → bikeshare; street traffic/congestion → traffic; traffic cameras → cctv; internet radio/stations → radio; ALPR/license plate readers/Flock cameras → alpr-cameras.',
+            'Common-name mapping for the non-obvious ids: space mission(s) → rocket-launches; fires/wildfires/active fires → local-firms (NASA FIRMS); ships/vessels/boats → ais-live-vessels; undersea/submarine cables → telegeography-submarine-cables; datacenters → local-datacenters; dams → local-dams; Australian/export ports → local-au-ports; Australian mines/mining → local-au-mines; Australian power stations/generation → local-au-power; energy grid/transmission/substations → aus-energy-grid; NEM generation mix/live power mix → nem-generation; bikes/bike share → bikeshare; street traffic/congestion → traffic; traffic cameras → cctv; internet radio/stations → radio; ALPR/license plate readers/Flock cameras → alpr-cameras.',
           $position: 1,
         },
       },
@@ -214,7 +214,7 @@ export const ACTION_DESCRIPTIONS = {
       properties: {
         stack: {
           description:
-            'photoreal = Google 3D. Use bing-aerial only when the user explicitly says "Bing aerial" — "satellite(s)" never means a basemap; only the explicit phrase "Esri" / "Esri imagery" means esri-imagery.',
+            'Stacks: bing-aerial, bing-labels, esri-imagery, osm. Use bing-aerial only when the user explicitly says "Bing aerial" — "satellite(s)" never means a basemap; only the explicit phrase "Esri" / "Esri imagery" means esri-imagery.',
           $position: 2,
         },
       },

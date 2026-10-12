@@ -269,6 +269,65 @@ test('recording restores the original HUD after repeated entry and revokes retai
   }
 });
 
+test('visual presets tray docks in the right rail directly under DISPLAY', (t) => {
+  const f = fixture();
+  const observed = new Set();
+  const previousResizeObserver = globalThis.ResizeObserver;
+  globalThis.ResizeObserver = class {
+    observe(node) {
+      observed.add(node);
+    }
+    disconnect() {
+      observed.clear();
+    }
+  };
+  t.after(() => {
+    if (previousResizeObserver === undefined) delete globalThis.ResizeObserver;
+    else globalThis.ResizeObserver = previousResizeObserver;
+  });
+  try {
+    const stack = f.nodes.get('right-context-rail');
+    stack.children = [];
+    stack.insertBefore = (panel, before) => {
+      stack.children = stack.children.filter((child) => child !== panel);
+      const index = before
+        ? stack.children.indexOf(before)
+        : stack.children.length;
+      stack.children.splice(index, 0, panel);
+    };
+    stack.prepend = (panel) => stack.insertBefore(panel, stack.children[0]);
+    for (const id of [
+      'pp-toggles',
+      'control-panel',
+      'cctv-panel',
+      'global-context-panel',
+    ]) {
+      const panel = f.nodes.get(id) || f.element();
+      panel.id = id;
+      panel.style = { removeProperty: () => {} };
+      panel.classList.add('collapsed');
+      f.nodes.set(id, panel);
+    }
+    stack.children = [f.nodes.get('global-context-panel')];
+    const owner = new PanelLayoutController({
+      readHud: () => ({}),
+      scheduleCockpitLayout() {},
+      readDisplayScrollTop: () => 0,
+      syncPanelCollapseButton() {},
+    });
+    owner._initRightPanelAdaptiveLayout();
+    assert.deepEqual(
+      stack.children.map((panel) => panel.id),
+      ['pp-toggles', 'control-panel', 'cctv-panel', 'global-context-panel'],
+    );
+    assert.ok(observed.has(f.nodes.get('control-panel')));
+    owner.destroy();
+    assert.equal(observed.size, 0);
+  } finally {
+    f.restore();
+  }
+});
+
 test('weather rail orders between CCTV and Context, resets positions, observes and syncs chrome', (t) => {
   const f = fixture();
   const observed = new Set();

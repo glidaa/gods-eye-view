@@ -1,0 +1,338 @@
+/* ------------------------------------------------------------------ *
+ * Transport bars — the top TRANSPORT bar (brand left, notifications +
+ * menu right) and the bottom status bar (coords/stack center, layer
+ * counts right). The bottom bar's left third stays empty: the
+ * attribution credit line lives there, untouched, above the backdrop.
+ * ------------------------------------------------------------------ */
+
+#title-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* Above the fixed style indicator (z 100) so the menu and bell dropdowns
+     paint over it; still below the help overlay (z 400). */
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  pointer-events: auto;
+  background: rgba(9, 18, 27, 0.86);
+  border-bottom: 1px solid rgba(172, 172, 172, 0.22);
+  backdrop-filter: blur(28px) saturate(1.35);
+  -webkit-backdrop-filter: blur(28px) saturate(1.35);
+  font-family: var(--font-mono);
+  user-select: none;
+}
+
+#title-bar .title-glow {
+  display: none;
+}
+
+.transport-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+
+.transport-brand strong {
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 4px;
+}
+
+.transport-brand .subtitle {
+  margin: 0;
+  color: rgba(245, 247, 250, 0.75);
+  font-size: 10px;
+  letter-spacing: 2.5px;
+  white-space: nowrap;
+}
+
+.transport-cluster {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.transport-bell-wrap,
+.transport-menu-wrap {
+  position: relative;
+}
+
+#help-btn,
+#notifications-btn,
+#transport-menu-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(172, 172, 172, 0.3);
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+#help-btn:hover,
+#notifications-btn:hover,
+#transport-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+#help-btn .material-symbols-outlined,
+#notifications-btn .material-symbols-outlined,
+#transport-menu-btn .material-symbols-outlined {
+  font-size: 19px;
+}
+
+.transport-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  background: #d7153a;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+.transport-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 120;
+  min-width: 220px;
+  max-width: min(320px, 80vw);
+  max-height: 50vh;
+  overflow-y: auto;
+  padding: 6px;
+  background: rgba(9, 18, 27, 0.96);
+  border: 1px solid rgba(172, 172, 172, 0.3);
+  border-radius: 10px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.58);
+}
+
+.transport-dropdown[hidden] {
+  display: none;
+}
+
+#transport-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: rgba(245, 247, 250, 0.92);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.8px;
+  text-align: left;
+  cursor: pointer;
+}
+
+#transport-menu button:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.transport-notice {
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: rgba(245, 247, 250, 0.92);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.transport-notice + .transport-notice {
+  border-top: 1px solid rgba(172, 172, 172, 0.16);
+}
+
+.transport-notice-empty {
+  color: rgba(245, 247, 250, 0.6);
+}
+
+.transport-notice-time {
+  display: block;
+  margin-top: 2px;
+  color: rgba(245, 247, 250, 0.55);
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+#transport-bottombar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0 16px;
+  background: rgba(9, 18, 27, 0.86);
+  border-top: 1px solid rgba(172, 172, 172, 0.22);
+  backdrop-filter: blur(28px) saturate(1.35);
+  -webkit-backdrop-filter: blur(28px) saturate(1.35);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1.2px;
+  color: rgba(245, 247, 250, 0.9);
+  pointer-events: none;
+  user-select: none;
+}
+
+.transport-status-center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.transport-status-right {
+  position: absolute;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.transport-sep {
+  opacity: 0.5;
+}
+
+@media (max-width: 760px) {
+  .transport-brand .subtitle {
+    display: none;
+  }
+  .transport-status-right {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Help overlay — fullscreen guide, opened from the TRANSPORT menu.
+ * ------------------------------------------------------------------ */
+
+#help-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(4, 8, 12, 0.72);
+  font-family: var(--font-mono);
+}
+
+#help-overlay[hidden] {
+  display: none;
+}
+
+.help-card {
+  width: min(760px, 94vw);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: rgba(9, 18, 27, 0.97);
+  border: 1px solid rgba(172, 172, 172, 0.32);
+  border-radius: 14px;
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.6);
+}
+
+.help-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid rgba(172, 172, 172, 0.2);
+}
+
+.help-kicker {
+  color: rgba(245, 247, 250, 0.65);
+  font-size: 10px;
+  letter-spacing: 2.5px;
+}
+
+.help-header h2 {
+  margin: 4px 0 0;
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+#help-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(172, 172, 172, 0.3);
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+#help-close:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.help-body {
+  overflow-y: auto;
+  padding: 6px 18px 18px;
+}
+
+.help-body section + section {
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(172, 172, 172, 0.14);
+}
+
+.help-body h3 {
+  margin: 10px 0 6px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.help-body ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.help-body li {
+  margin: 6px 0;
+  color: rgba(245, 247, 250, 0.92);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.help-body strong {
+  color: #ffffff;
+}

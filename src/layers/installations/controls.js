@@ -10,13 +10,13 @@ export function createControls({ state: layerState, services, parts, source }) {
 
     icon: '⌖',
 
-    source: 'OpenStreetMap + optional Google Maps Places',
+    source: 'OpenStreetMap + optional places search',
 
     updateInterval: 0,
 
     statsRefreshInterval: 1000,
 
-    /** Request a one-shot Google Maps Places search around the current map view. */
+    /** Request a one-shot places search around the current map view. */
     searchNearby() {
       layerState.googleSearchRequested = true;
       return parts.ingestion.loadInstallations();

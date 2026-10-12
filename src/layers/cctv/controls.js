@@ -78,6 +78,9 @@ export function createControls({ state: layerState, services, parts, source }) {
         layerState._recordById.has(params.selectedCameraId)
       ) {
         parts.selection.setActiveCamera(params.selectedCameraId);
+        // A specific ask holds for a full hop interval before the random
+        // slideshow resumes.
+        layerState._lastHopAt = Date.now();
       }
       if (params.calibration && typeof params.calibration === 'object') {
         const calibrationCfg = params.calibration;
@@ -296,6 +299,9 @@ export function createControls({ state: layerState, services, parts, source }) {
     selectCamera(cameraId, options = {}) {
       const result = parts.selection.setActiveCamera(cameraId);
       if (result === CCTV_ACTIVATION_RESULT.NOT_FOUND) return false;
+      // A specific ask holds for a full hop interval before the random
+      // slideshow resumes.
+      layerState._lastHopAt = Date.now();
       if (options.focus) {
         parts.navigation.focusCamera(cameraId, options.durationSec || 1.8);
       }
@@ -330,6 +336,9 @@ export function createControls({ state: layerState, services, parts, source }) {
       );
       const nextId = layerState._records[nextIdx].camera.id;
       parts.selection.setActiveCamera(nextId);
+      // A specific ask holds for a full hop interval before the random
+      // slideshow resumes.
+      layerState._lastHopAt = Date.now();
       if (options.focus) {
         parts.navigation.focusCamera(nextId, options.durationSec || 1.8);
       }
@@ -347,6 +356,9 @@ export function createControls({ state: layerState, services, parts, source }) {
       const nearest = parts.navigation.nearestCameraIdToViewer();
       if (!nearest) return null;
       parts.selection.setActiveCamera(nearest);
+      // A specific ask holds for a full hop interval before the random
+      // slideshow resumes.
+      layerState._lastHopAt = Date.now();
       if (options.focus !== false) {
         parts.navigation.focusCamera(nearest, options.durationSec || 1.8);
       }

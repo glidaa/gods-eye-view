@@ -27,7 +27,7 @@ export function createApplicationTools({
   signal,
   defer,
 }) {
-  const { viewer, tileset, mapStackController, operations } = scene;
+  const { viewer, mapStackController, operations } = scene;
   const { styleManager, weatherEffects, cockpitCloudEffects } = controls;
   const { dataManager } = data;
   const sceneDirector = new SceneDirector(viewer, styleManager, dataManager, {
@@ -42,7 +42,6 @@ export function createApplicationTools({
   onSceneDirector?.(sceneDirector);
   const annotations = initAnnotations({
     viewer,
-    tileset,
     placeSearch,
     resolver: operations.annotationResolver,
   });
@@ -57,10 +56,10 @@ export function createApplicationTools({
   defer(() => drawTool?.destroy());
   // DATA ▸ Recent Imagery: the box tool claims the pointer like Draw and the
   // panel lives on the right rail, so both belong to the application
-  // lifetime. The tileset lets the layer drape while the globe is hidden.
+  // lifetime.
   const recentImagery = dataManager.layers.get('recent-imagery')?.module;
   if (recentImagery) {
-    recentImagery.attachTileset(tileset);
+    recentImagery.attachTileset(null);
     const imageryBoxTool = initImageryBoxTool({
       viewer,
       onBox: (box) => recentImagery.setBox(box),
@@ -142,7 +141,6 @@ export function createApplicationTools({
   window.__godsEyeView = {
     viewer,
     styleManager,
-    tileset,
     dataManager,
     sceneDirector,
     mapStackController,

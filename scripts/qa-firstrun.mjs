@@ -116,6 +116,7 @@ const appState = (page) => page.evaluate(() => {
   for (const id of [
     'local-datacenters', 'local-dams', 'telegeography-submarine-cables',
     'local-firms', 'earthquakes', 'flights', 'military', 'rocket-launches', 'satellites',
+    'local-au-ports', 'local-au-mines', 'local-au-power', 'aus-energy-grid', 'nem-generation',
   ]) {
     layers[id] = !!dm?.isEnabled?.(id);
     counts[id] = all.find((entry) => entry.id === id)?.stats?.count ?? null;
@@ -123,6 +124,8 @@ const appState = (page) => page.evaluate(() => {
   const firms = all.find((entry) => entry.id === 'local-firms');
   return {
     heightKm: carto ? Math.round(carto.height / 1000) : null,
+    lat: carto ? Math.round(carto.latitude * 180 / Math.PI * 10) / 10 : null,
+    lon: carto ? Math.round(carto.longitude * 180 / Math.PI * 10) / 10 : null,
     layers,
     counts,
     contextMode: sm?.getContextModeState?.().mode ?? null,
@@ -616,19 +619,28 @@ async function main() {
     await open(page, { query: "?welcome=1", errorSink: consoleErrors });
     before = await appState(page);
     await watchLoadingChip(page);
-    await pick(page, 'environmental', { settle: ['earthquakes', 'local-firms'] });
+    await pick(page, 'environmental', { settle: ['earthquakes', 'local-firms', 'local-au-ports', 'local-au-mines', 'local-au-power', 'aus-energy-grid', 'nem-generation'] });
     state = await appState(page);
     record('ENVIRONMENTAL leaves the detection override untouched',
       state.detectionOverridden === false, `_detectionUserOverridden=${state.detectionOverridden}`);
     record('a mission never auto-suppresses itself', state.durable === null, `durable=${state.durable}`);
     record('a mission never writes the detection-allocation pref',
       state.allocation === before.allocation, `${before.allocation} → ${state.allocation}`);
-    record('ENVIRONMENTAL enables BOTH of its feeds', state.layers.earthquakes && state.layers['local-firms'],
-      `quakes=${state.layers.earthquakes} fires=${state.layers['local-firms']}`);
+    const auOn = ['local-au-ports', 'local-au-mines', 'local-au-power', 'aus-energy-grid', 'nem-generation']
+      .every((id) => state.layers[id]);
+    record('ENVIRONMENTAL enables its full NSW set', state.layers.earthquakes && state.layers['local-firms'] && auOn,
+      `quakes=${state.layers.earthquakes} fires=${state.layers['local-firms']} au=${auOn}`);
     record('ENVIRONMENTAL loads real quake records', (state.counts.earthquakes ?? 0) > 0,
       `${state.counts.earthquakes} quakes`);
-    record('ENVIRONMENTAL reaches the full-earth camera', state.heightKm !== null && state.heightKm > 12000,
-      `${state.heightKm} km`);
+    record('ENVIRONMENTAL loads the bundled Australia snapshots',
+      (state.counts['local-au-ports'] ?? 0) > 0 && (state.counts['local-au-mines'] ?? 0) > 0
+        && (state.counts['local-au-power'] ?? 0) > 0,
+      `ports=${state.counts['local-au-ports']} mines=${state.counts['local-au-mines']} plants=${state.counts['local-au-power']}`);
+    record('ENVIRONMENTAL frames New South Wales, not the globe',
+      state.heightKm !== null && state.heightKm >= 1000 && state.heightKm <= 3000
+        && state.lat !== null && state.lat <= -28 && state.lat >= -38
+        && state.lon !== null && state.lon >= 141 && state.lon <= 154,
+      `${state.lat},${state.lon} @ ${state.heightKm} km`);
 
     /*
      * The tile optimizes for the FULLY CONFIGURED app, so the assertion splits

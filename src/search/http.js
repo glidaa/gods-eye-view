@@ -1,4 +1,5 @@
 import { validCoordinate } from './geospatial.js';
+import { normalizeNominatimReverse } from '../sources/nominatim.js';
 
 function labels(values) {
   return [
@@ -49,11 +50,10 @@ export function normalizeGoogleReverse(data) {
 /** Existing JSON protocols with application-selected endpoints and transport. */
 export function createHttpGeospatialProvider({
   fetchImpl = (...args) => fetch(...args),
-  resolveApiKey,
   endpoints = {},
 } = {}) {
   const urls = {
-    reverse: 'https://maps.googleapis.com/maps/api/geocode/json',
+    reverse: 'https://nominatim.openstreetmap.org/reverse',
     textSearch: '/api/google/text-search',
     nearby: '/api/google/nearby-places',
     route: '/api/route',
@@ -81,22 +81,19 @@ export function createHttpGeospatialProvider({
       .slice(0, 20);
   return {
     attribution: {
-      reverseGeocode: 'Google',
-      textSearch: 'Google',
-      nearby: 'Google',
+      reverseGeocode: 'OpenStreetMap / Nominatim',
+      textSearch: 'Places',
+      nearby: 'Places',
       route: 'OpenStreetMap / OSRM',
     },
     routeProfiles: ['foot', 'car', 'bike'],
     async reverseGeocode(latitude, longitude, options) {
-      const key = resolveApiKey?.();
-      if (resolveApiKey && !key) return null;
-      return normalizeGoogleReverse(
-        await json(
-          urls.reverse,
-          { latlng: `${latitude},${longitude}`, ...(key ? { key } : {}) },
-          options,
-        ),
+      const data = await json(
+        urls.reverse,
+        { lat: latitude, lon: longitude },
+        options,
       );
+      return normalizeNominatimReverse(data) || normalizeGoogleReverse(data);
     },
     async textSearch(query, { latitude, longitude, radiusM = 6000 }, options) {
       return places(

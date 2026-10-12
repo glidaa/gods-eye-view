@@ -1,6 +1,7 @@
 import { createWeatherClock } from '../layers/weather/clock.js';
 import { createWeatherLayer } from '../layers/weather/index.js';
 import { createCyclonesLayer } from '../layers/cyclones/index.js';
+import { createNemGenerationLayer } from '../layers/nem/index.js';
 import { createWindLayer } from '../layers/wind/index.js';
 import { createLayerCatalog } from './catalog.js';
 import { LAYER_STATE_REGISTRY } from '../data/layerState.js';
@@ -19,6 +20,7 @@ import { createApplicationInstallations } from './layers/militaryInstallations.j
 import { createApplicationSatellites } from './layers/satellites.js';
 import { createApplicationLaunches } from './layers/rocketLaunches.js';
 import { createApplicationAlpr } from './layers/alprCameras.js';
+import { createApplicationAusEnergyGrid } from './layers/ausEnergyGrid.js';
 import { createApplicationAwareness } from './layers/militaryAwareness.js';
 import { createApplicationFirms } from './layers/firms.js';
 import { createApplicationEarthquakes } from './layers/earthquakes.js';
@@ -46,12 +48,14 @@ const SOURCE_METHODS = Object.freeze({
   satellites: ['readGroup'],
   launches: ['getLaunches', 'getActiveTle'],
   alpr: ['fetch'],
+  ausEnergy: ['fetch'],
   firms: ['getSnapshot'],
   wind: ['getSnapshot'],
   weather: ['getSnapshot'],
   cyclones: ['getSnapshot'],
   earthquakes: ['getSnapshot'],
   cables: ['fetch'],
+  nem: ['getSnapshot'],
 });
 
 /** Construct the current catalog without choosing any source provider.
@@ -122,6 +126,7 @@ export function createApplicationCatalog({
         military,
         createApplicationEarthquakes({ source: sources.earthquakes }),
         createApplicationAlpr({ surface, source: sources.alpr }),
+        createApplicationAusEnergyGrid({ source: sources.ausEnergy }),
         satellites,
         createApplicationLaunches({ source: sources.launches, satellites }),
         createApplicationTraffic({ source: sources.traffic }),
@@ -156,6 +161,7 @@ export function createApplicationCatalog({
           clock: weatherClock,
         }),
         createCyclonesLayer({ feed: sources.cyclones }),
+        createNemGenerationLayer({ feed: sources.nem }),
         ...createInfrastructureLayers(localGeoJsonServices),
         createApplicationCables({ source: sources.cables }),
         createApplicationFirms({

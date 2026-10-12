@@ -10,6 +10,8 @@ export const APPLICATION_TEMPLATES = Object.freeze([
   'welcome',
   'provider-settings',
   'hud-loading',
+  'nsw-views',
+  'help',
 ]);
 const allowed = new Set(APPLICATION_TEMPLATES);
 

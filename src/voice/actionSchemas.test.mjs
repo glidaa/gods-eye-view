@@ -21,7 +21,7 @@ test('the complete Realtime tool payload pins the additive analyst and satellite
     .digest('hex');
   assert.equal(
     digest,
-    '9e33ac0fa5a860a17bb6d79f2c43646b6c36d0c932590bf114814e891a1c96de',
+    'f122522309bbbb1f589e5f15a7a73254092ee843a5df103e87399b50daca9526',
   );
 });
 
@@ -86,6 +86,36 @@ test('all legacy action arguments are byte-identical after removing the delibera
   layers.enum = layers.enum.filter(
     (key) => !['satellites', 'local-datacenters', 'local-dams'].includes(key),
   );
+  // Australia energy/industry layers: enum-only additions across the layer
+  // enums (visibility, menu, entity context, analyst). Strip them from every
+  // enum so the hash below still proves nothing else moved.
+  const auAdditions = new Set([
+    'local-au-ports',
+    'local-au-mines',
+    'local-au-power',
+    'aus-energy-grid',
+    'nem-generation',
+  ]);
+  const stripAdditions = (node) => {
+    if (Array.isArray(node)) {
+      for (let i = node.length - 1; i >= 0; i--) {
+        if (typeof node[i] === 'string' && auAdditions.has(node[i])) {
+          node.splice(i, 1);
+        } else {
+          stripAdditions(node[i]);
+        }
+      }
+    } else if (node && typeof node === 'object') {
+      for (const value of Object.values(node)) stripAdditions(value);
+    }
+  };
+  stripAdditions(legacy);
+  // Google removal: 'photoreal' was deliberately deleted from the
+  // set_map_stack enum. Restore it at its original head position so the hash
+  // below still proves nothing else moved.
+  legacy
+    .find((tool) => tool.name === 'set_map_stack')
+    .parameters.properties.stack.enum.unshift('photoreal');
   // Independently derived by executing trusted c9f9896 actionSchemas in the restricted container.
   assert.equal(
     createHash('sha256').update(JSON.stringify(legacy)).digest('hex'),

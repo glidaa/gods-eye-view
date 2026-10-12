@@ -25,23 +25,14 @@ export const KEY_SETUP_APPEND_HEADER =
  * Provider credentials, in display order — most magic per
  * minute first. `tier` mirrors the README's color legend: 'metered' (🔴) is a
  * billing-enabled account, 'free' (🟡) is a register-and-paste key.
- * `clientExposed` marks the two keys that are injected into the browser
- * bundle by design (restrict them at the provider, per SECURITY.md).
- * `hidden` keeps advanced configuration out of the panel and missing-key count.
+ * `clientExposed` marks keys injected into the browser bundle by design
+ * (restrict them at the provider, per SECURITY.md). `hidden` keeps advanced
+ * configuration out of the panel and missing-key count.
  */
 export const KEY_SETUP_KEYS = Object.freeze([
   Object.freeze({
-    id: 'google-maps',
-    title: 'GOOGLE MAPS',
-    unlocks: 'The photorealistic 3D planet + place search',
-    getUrl: 'https://developers.google.com/maps/documentation/tile/get-api-key',
-    envVars: Object.freeze(['GOOGLE_MAPS_API_KEY']),
-    tier: 'metered',
-    clientExposed: true,
-  }),
-  Object.freeze({
     id: 'google-maps-server',
-    title: 'GOOGLE MAPS — SERVER',
+    title: 'PLACES — SERVER',
     unlocks: 'Places context + Street View fallback; optional separate key',
     getUrl:
       'https://developers.google.com/maps/documentation/places/web-service/get-api-key',

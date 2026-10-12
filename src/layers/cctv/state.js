@@ -34,7 +34,10 @@ export function createState({ services }) {
 
   layerState._showProjection = true;
 
-  layerState._autoHop = false;
+  // ON by default: the panel is a live slideshow of random area cameras
+  // unless the operator (or a link) asked for something specific. An explicit
+  // autoHop:false — link, stored state, or the toggle — still wins.
+  layerState._autoHop = true;
 
   // An explicit empty-space deselect keeps AUTO HOP configured but prevents its
   // timer from silently choosing a replacement. A later explicit activation or

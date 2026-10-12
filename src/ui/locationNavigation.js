@@ -292,6 +292,49 @@ export class LocationNavigation {
     }
   }
 
+  /**
+   * Fly to an explicit map view (mission framing). Leaner than the globe
+   * reset on purpose: callers treat the flight as framing, never as a result,
+   * so there is no arrival promise to settle — a superseded flight simply ends.
+   * @param {{lat:number, lon:number, alt:number, heading?:number, pitch?:number, duration?:number}} [view]
+   * @returns {{ok:boolean, action:string}}
+   */
+  flyToView(view = {}) {
+    if (this._disposed) return { ok: false, action: 'fly_to_view' };
+    const lat = Number(view.lat);
+    const lon = Number(view.lon);
+    const alt = Number(view.alt);
+    if (
+      !Number.isFinite(lat) ||
+      Math.abs(lat) > 90 ||
+      !Number.isFinite(lon) ||
+      Math.abs(lon) > 180 ||
+      !Number.isFinite(alt) ||
+      alt < 0 ||
+      alt > 20000000
+    ) {
+      return { ok: false, action: 'fly_to_view' };
+    }
+    this.services.interruptCameraMotion?.('mission-view');
+    this._stopOrbit();
+    this.viewer.trackedEntity = undefined;
+    this.viewer.camera.cancelFlight();
+    this.viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+    this.viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(lon, lat, alt),
+      orientation: {
+        heading: Cesium.Math.toRadians(Number(view.heading) || 0),
+        pitch: Cesium.Math.toRadians(
+          Number.isFinite(Number(view.pitch)) ? Number(view.pitch) : -90,
+        ),
+        roll: 0,
+      },
+      duration: Math.max(0.2, Number(view.duration) || 2.8),
+      easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT,
+    });
+    return { ok: true, action: 'fly_to_view' };
+  }
+
   resetToGlobeView() {
     const {
       GLOBE_VIEW,

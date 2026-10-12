@@ -1,10 +1,19 @@
   <div id="left-panel-stack">
+  <!-- Panel quick row: dark shortcut buttons directly under TRANSPORT.
+       DATA LAYERS opens/closes the full toggle list; LOCATION and SCENES
+       do the same for their panels. -->
+  <div id="panel-quick-row" role="toolbar" aria-label="Panel shortcuts">
+    <button type="button" data-quick-panel="location-bar" aria-pressed="false">LOCATION</button>
+    <button type="button" data-quick-panel="data-panel" aria-pressed="false">DATA LAYERS</button>
+    <button type="button" data-quick-panel="scene-panel" aria-pressed="false">SCENES</button>
+  </div>
   <!-- Data Layer Toggle Panel -->
   <div id="data-panel" class="panel-collapsible collapsed active" data-panel-id="data-panel">
     <div class="panel-glow"></div>
     <div class="data-panel-inner">
       <div class="panel-header">
         <span class="panel-title">DATA LAYERS</span>
+        <span id="data-layer-counts" class="panel-counts" aria-live="polite"></span>
         <span class="panel-divider"></span>
         <button class="panel-collapse-btn" data-collapse-target="data-panel" title="Collapse panel">+</button>
       </div>
@@ -17,7 +26,7 @@
     <div class="panel-glow"></div>
     <div class="cctv-panel-inner">
       <div class="panel-header">
-        <span class="panel-title">CCTV</span>
+        <span class="panel-title">CCTV / IMAGES</span>
         <span class="panel-divider"></span>
         <button class="panel-collapse-btn" data-collapse-target="cctv-panel" title="Collapse panel">+</button>
       </div>
@@ -45,7 +54,10 @@
         <button id="cctv-projection-btn" class="scene-btn">PROJECTION ON</button>
         <span id="cctv-quality-chip">CAL · --</span>
       </div>
-      <div class="cctv-calibration-block">
+      <div class="cctv-controls">
+        <button id="cctv-settings-btn" class="scene-btn" type="button" aria-expanded="false" aria-controls="cctv-calibration-block" title="Show image calibration settings">SETTINGS</button>
+      </div>
+      <div id="cctv-calibration-block" class="cctv-calibration-block" hidden>
         <div class="cctv-calibration-header">
           <div class="cctv-summary-label">CALIBRATION</div>
           <button id="cctv-adjust-btn" class="scene-btn" title="Drag the camera in the world: rings rotate, arrows move, handles set range/FOV">ADJUST</button>

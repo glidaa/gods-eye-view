@@ -101,9 +101,15 @@ export const FIRST_RUN_MISSIONS = Object.freeze({
   }),
   environmental: Object.freeze({
     kind: 'globe',
-    // Live USGS earthquakes AND NASA FIRMS active fires. The launcher optimizes
-    // for the FULLY CONFIGURED experience (owner ruling, 2026-08-23): the tile
-    // promises both, so it turns on both, and the subcopy in index.html says so.
+    // NSW-first energy and events: the Australia power, ports, mines, live
+    // grid and NEM mix layers, plus live USGS earthquakes AND NASA FIRMS
+    // active fires. The launcher optimizes for the FULLY CONFIGURED
+    // experience (owner ruling, 2026-08-23): the tile promises the full set,
+    // so it turns on the full set, and the subcopy in welcome.html says so.
+    // The flight frames New South Wales top-down instead of pulling out to
+    // the globe — a region-framed view of labeled layers reads as a map,
+    // while a globe pull-out centered on the boot continent never says what
+    // you are looking at.
     //
     // Keyless, FIRMS is honest where it counts — its own layer row reads
     // "UNAVAILABLE · NASA FIRMS · LIVE · KEY REQUIRED", and the quakes half of
@@ -114,8 +120,21 @@ export const FIRST_RUN_MISSIONS = Object.freeze({
     // machine shared by every layer and not a thing to refactor the night
     // before a launch. LEDGERED post-launch. Until it lands, keyless visitors
     // are judged on the layer row, which tells them the truth.
-    layerIds: Object.freeze(['earthquakes', 'local-firms']),
-    busyText: 'Scanning active events…',
+    layerIds: Object.freeze([
+      'earthquakes',
+      'local-firms',
+      'local-au-ports',
+      'local-au-mines',
+      'local-au-power',
+      'aus-energy-grid',
+      'nem-generation',
+    ]),
+    // Key-gated layers the tile still ASKS for but never fails on: a keyless
+    // FIRMS refuses every time, and a retry that can never succeed is a stuck
+    // launcher, not diligence. The layer row reports KEY REQUIRED itself.
+    optionalLayerIds: Object.freeze(['local-firms']),
+    busyText: 'Opening NSW energy and events…',
+    view: Object.freeze({ lat: -32.5, lon: 147.0, alt: 1700000 }),
   }),
   explore: Object.freeze({ kind: 'none' }),
 });
@@ -248,6 +267,14 @@ export function rememberFirstRunSessionDismissed(sessionStorageRef) {
 }
 
 /**
+ * Budget for one OPTIONAL layer inside a mission. Past it the tile completes
+ * without waiting — the layer keeps enabling underneath and reports at its
+ * own row. (Cold FIRMS can take ~19 s for 160 k fire points; the tile must
+ * never feel stuck on a layer it does not require.)
+ */
+export const OPTIONAL_LAYER_TIMEOUT_MS = 8000;
+
+/**
  * Run a launcher choice against the app's existing internal APIs.
  *
  * A failed mission is NOT closed: the visitor can retry or fall back to manual
@@ -258,11 +285,21 @@ export function rememberFirstRunSessionDismissed(sessionStorageRef) {
  * @param {(mode: string) => Promise<object>} deps.setContextMode
  * @param {(layerId: string) => Promise<boolean>} deps.setLayerEnabled
  * @param {() => Promise<any>} deps.flyToGlobe
+ * @param {(view: object) => Promise<any>} [deps.flyToView]
+ * @param {(settled: number, total: number) => void} [deps.onProgress]
+ * @param {number} [deps.optionalTimeoutMs]
  * @returns {Promise<{ok: boolean, choice: string, result?: object, failedLayerIds?: string[]}>}
  */
 export async function runFirstRunChoice(
   choice,
-  { setContextMode, setLayerEnabled, flyToGlobe },
+  {
+    setContextMode,
+    setLayerEnabled,
+    flyToGlobe,
+    flyToView,
+    onProgress,
+    optionalTimeoutMs = OPTIONAL_LAYER_TIMEOUT_MS,
+  },
 ) {
   const mission = FIRST_RUN_MISSIONS[choice];
   if (!mission) return { ok: false, choice };
@@ -271,26 +308,60 @@ export async function runFirstRunChoice(
     const result = await setContextMode(mission.contextMode);
     return { ok: Boolean(result?.ok), choice, result };
   }
-  // Globe missions: start the pull-out and the layer work together so the
-  // camera is already moving while the feeds spin up. The flight is framing,
-  // not the mission — a stalled or superseded flight never fails the tile.
+  // Globe missions: start the flight and the layer work together so the
+  // camera is already moving while the feeds spin up. A mission with a view
+  // frames the region its layers describe; without one the flight pulls out
+  // to the globe. The flight is framing, not the mission — a stalled or
+  // superseded flight never fails the tile.
   const flight = Promise.resolve()
-    .then(() => flyToGlobe())
+    .then(() =>
+      mission.view && flyToView ? flyToView(mission.view) : flyToGlobe(),
+    )
     .catch(() => null);
+  const optional = new Set(mission.optionalLayerIds || []);
+  let settled = 0;
   const outcomes = await Promise.all(
     mission.layerIds.map(async (layerId) => {
+      const work = (async () => {
+        try {
+          return { layerId, ok: (await setLayerEnabled(layerId)) !== false };
+        } catch {
+          return { layerId, ok: false };
+        }
+      })();
+      // Optional layers never stall the tile: past the budget they report
+      // failed-but-optional while the real enable keeps running underneath —
+      // the layer row shows its live state when it arrives. Required layers
+      // gate the tile no matter how slow; they are the promise.
+      const result = optional.has(layerId)
+        ? await Promise.race([
+            work,
+            new Promise((resolve) =>
+              setTimeout(
+                () => resolve({ layerId, ok: false, timedOut: true }),
+                optionalTimeoutMs,
+              ),
+            ),
+          ])
+        : await work;
+      settled += 1;
       try {
-        return { layerId, ok: (await setLayerEnabled(layerId)) !== false };
+        onProgress?.(settled, mission.layerIds.length);
       } catch {
-        return { layerId, ok: false };
+        // Progress is narration — it never fails the tile.
       }
+      return result;
     }),
   );
   await flight;
   const failedLayerIds = outcomes
     .filter((entry) => !entry.ok)
     .map((entry) => entry.layerId);
-  return { ok: failedLayerIds.length === 0, choice, failedLayerIds };
+  // failedLayerIds stays complete (the failure message names real layers);
+  // only REQUIRED failures fail the tile. Optional layers were asked for and
+  // report their own state at their own rows.
+  const requiredFailed = failedLayerIds.filter((id) => !optional.has(id));
+  return { ok: requiredFailed.length === 0, choice, failedLayerIds };
 }
 
 /**
@@ -472,6 +543,12 @@ export function initFirstRunExperience({
         setLayerEnabled: (layerId) =>
           dataManager.setEnabled(layerId, true, { origin: 'user' }),
         flyToGlobe: () => styleManager.resetToGlobeView(),
+        flyToView: (view) => styleManager.flyToView(view),
+        onProgress: (done, total) => {
+          if (status && status.dataset.sticky !== 'true') {
+            status.textContent = `${FIRST_RUN_MISSIONS[choice]?.busyText || 'Working…'} (${done}/${total})`;
+          }
+        },
       });
     } catch (error) {
       // A thrown mission is a real defect worth seeing in a bug report; the

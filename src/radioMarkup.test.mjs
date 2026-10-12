@@ -183,17 +183,21 @@ test('no unchanged Realtime tool definition drifts silently', () => {
     'analyst_query',
     'next_iss_pass',
     'next_satellite_pass',
+    // Australia energy/industry release: layer-enum additions only.
+    'set_layer_visibility',
+    'show_data_layers_menu',
+    'get_entity_context',
   ]);
   const unchanged = realtimeTools()
     .filter((tool) => !TOUCHED.has(tool.name))
     .sort((a, b) => a.name.localeCompare(b.name));
-  assert.equal(unchanged.length, 19);
+  assert.equal(unchanged.length, 16);
   const digest = createHash('sha256')
     .update(JSON.stringify(unchanged))
     .digest('hex')
     .slice(0, 16);
   // Analyst additions and ISS wording correction are explicitly excluded above; all other tool definitions retain their pin.
-  assert.equal(digest, '7411ea585e534795', 'an unchanged Realtime tool definition drifted');
+  assert.equal(digest, '1a094c509b54d5cd', 'an unchanged Realtime tool definition drifted');
 });
 
 test('Radio volume and mission speed share the Sharpen slider visual language', () => {

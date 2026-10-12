@@ -188,7 +188,9 @@ export class PanelChrome {
     panelEl.classList.toggle('dock-pinned', shouldPin);
     button.setAttribute('aria-pressed', String(shouldPin));
     document
-      .querySelectorAll('#command-dock .dock-pinned-top')
+      .querySelectorAll(
+        '#command-dock .dock-pinned-top, #right-context-rail .dock-pinned-top',
+      )
       .forEach((pinnedPanel) => {
         pinnedPanel.classList.remove('dock-pinned-top');
       });
@@ -202,7 +204,7 @@ export class PanelChrome {
       });
     } else {
       const remainingPinnedPanel = document.querySelector(
-        '#command-dock .dock-pinned',
+        '#command-dock .dock-pinned, #right-context-rail .dock-pinned',
       );
       remainingPinnedPanel?.classList.add('dock-pinned-top');
       if (!restore && !panelEl.matches(':hover')) {

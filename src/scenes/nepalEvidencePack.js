@@ -166,7 +166,7 @@ export function expandNepalEvidencePack(base) {
       roll: Number.isFinite(Number(camera.roll)) ? Number(camera.roll) : 0,
       duration,
       hold,
-      mapStack: 'photoreal',
+      mapStack: 'esri-imagery',
       layers: {
         [layerId]: {
           enabled: true,

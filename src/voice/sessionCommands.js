@@ -8,6 +8,7 @@ export function createVoiceCommands({
   annotations = null,
   createSession,
   createController,
+  createChat = null,
   backend,
   signal,
   debugSink,
@@ -31,6 +32,21 @@ export function createVoiceCommands({
       }),
   });
   const adapter = session.adapter;
+  const toggleVoiceSession = () => {
+    if (adapter.ignoreButtonClick?.()) return;
+    if (session.isActive()) session.stop();
+    else void session.start({ pushToTalk: false });
+  };
+  const chat = createChat
+    ? createChat({
+        document: globalThis.document,
+        sendText: (text) => session.sendText(text),
+        canSend: () => session.isActive(),
+        subscribe: (listener) => session.subscribe(listener),
+        toggleVoice: toggleVoiceSession,
+      })
+    : null;
+  if (chat) chat.handleSessionEvent({ type: 'state', state: session.state });
   const capabilities = adapter.capabilities || {};
   if (ui.tierButton) ui.tierButton.hidden = !capabilities.costControls;
   if (ui.costValue) ui.costValue.hidden = !capabilities.costControls;
@@ -59,11 +75,8 @@ export function createVoiceCommands({
   const annotationUnsubscribe = annotations?.onOutlineEvent?.((event) => {
     session.sendMapEvent({ type: 'map_annotation_outline', ...event });
   });
-  const buttonHandler = () => {
-    if (adapter.ignoreButtonClick?.()) return;
-    if (session.isActive()) session.stop();
-    else void session.start({ pushToTalk: false });
-  };
+  // The dock button and the chat mic run the same toggle.
+  const buttonHandler = toggleVoiceSession;
   ui.button.addEventListener('click', buttonHandler);
   session.signal.addEventListener(
     'abort',
@@ -72,6 +85,7 @@ export function createVoiceCommands({
       annotationUnsubscribe?.();
       updateStatus();
       ui.root.remove();
+      chat?.destroy();
     },
     { once: true },
   );
@@ -80,7 +94,9 @@ export function createVoiceCommands({
     annotationUnsubscribe?.();
     updateStatus();
     ui.root.remove();
+    chat?.destroy();
   } else adapter.bindControls?.();
+  if (chat) controls.chat = chat;
   window.__gevVoiceCommands = controls;
   return controls;
 }

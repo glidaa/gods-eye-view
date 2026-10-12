@@ -12,7 +12,6 @@ let constructed = false;
 
 /** Compose the standalone application once per page. Reload to start again. */
 export function createStandaloneApplication({
-  googleApiKey,
   cesiumToken,
   geospatial = {},
   voice = {},
@@ -33,12 +32,10 @@ export function createStandaloneApplication({
         // so it stays free of application state.
         presets: CITY_POIS,
         ...geospatial,
-        resolveApiKey: () => googleApiKey,
         signal: context.signal,
       });
       const scene = await createStandaloneScene({
         ...context,
-        googleApiKey,
         cesiumToken,
         loaderStatus,
       });

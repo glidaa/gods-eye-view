@@ -3623,7 +3623,7 @@ are omitted rather than framing the wrong part of the globe.
 ### Map Stack Switcher (June 2026)
 
 - `src/mapStackController.js` switches between Google Photorealistic 3D (`photoreal`, the default when a Google or ion key is present), keyless Esri World Imagery (the zero-key default landing, with keyless terrain), Bing Aerial / Aerial-with-Labels via Cesium ion world imagery (require `CESIUM_ION_TOKEN`), and OSM tile fallback. Bing Road is **retired**: it is gone from `MAP_STACKS`, from the `set_map_stack` enum, and from the voice aliases (road phrasings now resolve to OSM, the one shipped road basemap). An old `map=bing-road` link is simply an unknown id and takes `setStack()`'s existing photoreal fallback with the Google 3D tile lit — pinned live in `scripts/qa-map-source-tray.mjs`.
-- The bottom Visual Presets tray presents a **five-tile MAP SOURCE row** (`#map-stack-chips`, `src/mapStackChips.js`): Google 3D, Esri Satellite, Bing Aerial, Bing Labels, and OSM. The duplicate left `#stack-panel` is retired. The five tiles share one row on desktop and two rows on narrow screens, carry `aria-pressed` on the active source, and remain keyboard-reachable with a visible focus outline.
+- The bottom Visual Presets tray presents a **five-tile MAP SOURCE row** (`#map-stack-chips`, `src/mapStackChips.js`): Google 3D, Satellite, Bing Aerial, Bing Labels, and OSM. The duplicate left `#stack-panel` is retired. The five tiles share one row on desktop and two rows on narrow screens, carry `aria-pressed` on the active source, and remain keyboard-reachable with a visible focus outline.
 - The lit tile follows controller state, not the click: a rejected switch (no ion token) or a superseded one (rapid A→B) leaves the genuinely active source lit, and the tray heading keeps its short-label status readout (`...` while switching, amber on `lastError`).
 - Ion stacks remain visible and keyboard-focusable when no ion token is configured, but expose `aria-disabled="true"` and do not switch. Their accessible label and tooltip quote `getStacks().unavailableReason` — the same string `setStack()` puts in the toast. OSM works keyless. The `ION` badge is gated on the stack's own `requiresIon`, so a `photoreal` chip unavailable because the Google tileset failed says so instead of falsely demanding an ion token.
 - Stack choice participates in share links (`src/sharelink.js`) and falls back to the best available stack when the requested one is unavailable (keyless boots land on Esri; OSM takes over automatically if Esri is unreachable). Share-link restore, the `set_map_stack` voice tool, and the chip row all land on the same `_setMapStack()` path.
@@ -4122,7 +4122,7 @@ the project's MIT license; see `DATA_SOURCES.md`.
 ## Map source factories and coordination
 
 Map selection is composed from separate imagery, terrain and 3D factories.
-The default registry retains Google 3D, Bing Aerial/Labels, Esri Satellite and
+The default registry retains Google 3D, Bing Aerial/Labels, Satellite and
 OSM, including their setup guidance and existing preset/share IDs. Esri still
 falls back to OSM on construction failure or two active tile failures, and
 credits follow the source actually displayed. Terrain remains lazy while the

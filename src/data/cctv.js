@@ -66,6 +66,7 @@ export const _setCctvCoverageStateForTest = layer._setCctvCoverageStateForTest;
 export const focusCctvRecord = layer.focusCctvRecord;
 export const maybeAutoHop = layer.maybeAutoHop;
 export const cctvCycleIndex = layer.cctvCycleIndex;
+export const cctvRandomHopIndex = layer.cctvRandomHopIndex;
 export {
   CCTV_CALIBRATION_STORAGE_KEY_V1,
   CCTV_CALIBRATION_STORAGE_KEY_V2,

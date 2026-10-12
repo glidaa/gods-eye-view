@@ -3082,9 +3082,6 @@ test('voice Radio: a key that geocodes to nothing still places the station, keyl
   const requests = [];
   installKeyedFetch(t, async (url) => {
     requests.push(String(url));
-    if (String(url).startsWith('https://maps.googleapis.com/')) {
-      return { ok: true, json: async () => ({ status: 'ZERO_RESULTS', results: [] }) };
-    }
     assert.match(String(url), /^https:\/\/photon\.komoot\.io\/api\/\?/);
     return {
       ok: true,
@@ -3106,9 +3103,9 @@ test('voice Radio: a key that geocodes to nothing still places the station, keyl
   assert.equal(calls.length, 1);
   assert.ok(Math.abs(calls[0].criteria.anchor.lat - 20.9101) < 1e-9);
   assert.ok(Math.abs(calls[0].criteria.anchor.lon - 107.1839) < 1e-9);
-  // Google is asked first and exactly once; Photon answers unbiased, in one call.
-  assert.equal(requests.filter((url) => url.includes('maps.googleapis.com')).length, 1);
+  // Keyless Photon answers unbiased, in one call; nothing else is asked.
   assert.equal(requests.filter((url) => url.includes('photon.komoot.io')).length, 1);
+  assert.equal(requests.length, 1);
   assert.match(requests.at(-1), /[?&]q=H%E1%BA%A1\+Long\+Bay/);
   assert.doesNotMatch(requests.at(-1), /[?&](lat|lon|bbox)=/, 'a named radio location is not viewport-biased');
 });

@@ -38,20 +38,19 @@ const V21 = 'VIIRS:2026-09-21';
 const V15 = 'VIIRS:2026-09-15';
 
 /**
- * A photoreal map controller with the real lease (`acquireImageryComparison`):
- * one owner, an asynchronous stack switch and a restore on release. `stuck`
- * never leaves photoreal, so the lease fails. With `subscribable`, every
- * settled switch notifies its subscribers, as `MapSourceController` does,
- * after `onSettled(id)` has moved the host.
+ * A globe map controller with the real lease (`acquireImageryComparison`):
+ * one owner and an asynchronous stack switch. The lease never switches the
+ * map (`preserve`), so `setStack` here is always the operator's own. With
+ * `subscribable`, every settled switch notifies its subscribers, as
+ * `MapSourceController` does.
  */
-function leasingController({ stuck = false, subscribable = false } = {}) {
+function leasingController({ subscribable = false } = {}) {
   const subscribers = new Set();
   const controller = {
     calls: [],
     acquisitions: 0,
-    _activeId: 'photoreal',
+    _activeId: 'esri-imagery',
     _generation: 0,
-    onSettled: null,
     getActiveId() {
       return this._activeId;
     },
@@ -63,8 +62,7 @@ function leasingController({ stuck = false, subscribable = false } = {}) {
       const generation = ++this._generation;
       await settle();
       if (generation !== this._generation) return { status: 'superseded' };
-      if (!stuck) this._activeId = id;
-      this.onSettled?.(this._activeId);
+      this._activeId = id;
       for (const listener of [...subscribers]) listener();
       return { status: 'ready', activeId: this._activeId };
     },
@@ -332,13 +330,18 @@ test('IMAGE: SHOW pins a day, focus stops moving the map, a second SHOW moves th
   assert.equal(f.layer.setAssignment('c', S18), false);
 });
 
-test('VS BASEMAP: the day swipes on the left with no second layer; the preview swipes too; the lease borrows Esri', async () => {
+test('VS BASEMAP: the day swipes on the left with no second layer; the preview swipes too; the map is never switched', async () => {
   const controller = leasingController();
   const f = fixture({ controller });
   await f.ready();
   await settleTimes();
-  assert.equal(controller.getActiveId(), 'esri-imagery', 'a preview borrows');
-  assert.equal(f.snap().borrowedEsri, true);
+  assert.deepEqual(
+    controller.calls,
+    [],
+    'a preview holds the lease, not the map',
+  );
+  assert.equal(f.diag().lease, true);
+  assert.equal(f.snap().borrowedEsri, false);
   assert.equal(f.layer.setMode('basemap'), true);
   assert.equal(f.layer.setMode('basemap'), false);
   assert.equal(f.snap().mode, 'basemap');
@@ -469,28 +472,35 @@ test('SWAP trades the sides of a live divider, again restores, never publishes a
   assert.equal(f.snap().swapped, false, 'CLEAR resets it');
 });
 
-test('any image on the map holds the Esri lease; the last image cleared hands Google 3D back', async () => {
+test('any image on the map holds the comparison lease; clearing the last image releases it without touching the map', async () => {
   const controller = leasingController();
   const f = fixture({ controller });
   await f.ready();
   await settleTimes();
-  assert.deepEqual(controller.calls, [['setStack', 'esri-imagery']]);
+  assert.equal(controller.acquisitions, 1);
+  assert.equal(f.diag().lease, true);
+  assert.deepEqual(controller.calls, [], 'the lease never switches');
   f.layer.setAssignment('a', S18);
   f.layer.clearPreview();
   await settleTimes();
-  assert.equal(controller.getActiveId(), 'esri-imagery', 'still showing A');
+  assert.equal(f.diag().lease, true, 'still showing A');
   f.layer.setAssignment('a', null);
   assert.equal(f.renderer.ownedCount(), 0);
   await settleTimes();
-  assert.equal(controller.getActiveId(), 'photoreal');
+  assert.equal(f.diag().lease, false);
+  assert.deepEqual(controller.calls, [], 'the release switches nothing back');
+  assert.equal(controller.getActiveId(), 'esri-imagery');
   assert.equal(f.snap().borrowedEsri, false);
-  // A new image borrows again; disable hands it back.
+  // A new image leases again; disable releases it, still switching nothing.
   f.layer.preview(L16);
   await settleTimes();
-  assert.equal(controller.getActiveId(), 'esri-imagery');
+  assert.equal(controller.acquisitions, 2);
+  assert.equal(f.diag().lease, true);
   f.layer.disable();
   await settleTimes();
-  assert.equal(controller.getActiveId(), 'photoreal');
+  assert.equal(f.diag().lease, false);
+  assert.deepEqual(controller.calls, []);
+  assert.equal(controller.getActiveId(), 'esri-imagery');
 });
 
 test('a refused lease is guidance and the images still drape without a swipe', async () => {
@@ -503,13 +513,19 @@ test('a refused lease is guidance and the images still drape without a swipe', a
   assert.equal(f.snap().error, null, 'nothing shown, nothing refused');
 });
 
-test('a lease that cannot reach the Esri map never shows the divider and says why', async () => {
-  const f = fixture({ controller: leasingController({ stuck: true }) });
+test('a lease that never becomes ready shows no divider and says why', async () => {
+  const controller = {
+    acquireImageryComparison: () => ({
+      ready: Promise.resolve({ status: 'failed' }),
+      release: () => Promise.resolve(),
+    }),
+  };
+  const f = fixture({ controller });
   await f.ready();
   f.layer.setMode('basemap');
   await settleTimes();
   assert.equal(f.snap().comparison.active, false);
-  assert.equal(f.snap().error, 'Esri map unavailable · no swipe');
+  assert.equal(f.snap().error, 'Comparison map unavailable · no swipe');
   assert.equal(f.owned().a.splitDirection, 'none');
 });
 
@@ -520,7 +536,7 @@ test('unpin then pin before the release settles recovers the lease', async () =>
   f.layer.setMode('basemap');
   f.layer.setAssignment('a', S18);
   await settleTimes();
-  assert.equal(controller.getActiveId(), 'esri-imagery');
+  assert.equal(f.diag().lease, true);
   f.layer.setAssignment('a', null);
   assert.equal(f.diag().releasing, true);
   f.layer.setAssignment('a', L16);
@@ -528,149 +544,134 @@ test('unpin then pin before the release settles recovers the lease', async () =>
   await settleTimes(8);
   assert.equal(f.diag().lease, true);
   assert.equal(f.snap().comparison.active, true);
-  assert.equal(controller.getActiveId(), 'esri-imagery');
+  assert.deepEqual(controller.calls, [], 'no switch in either direction');
 });
 
-/**
- * A / B on Esri from Google 3D, with the host following the active stack:
- * Google 3D hides the globe (tileset host), every other stack is a globe.
- */
+/** A / B comparing on a globe stack, the lease held, nothing switched. */
 async function comparingOnEsri() {
   const controller = leasingController({ subscribable: true });
-  const f = fixture({ controller, hostKind: 'tileset' });
-  controller.onSettled = (id) => {
-    f.hostState.kind = id === 'photoreal' ? 'tileset' : 'globe';
-  };
+  const f = fixture({ controller, hostKind: 'globe' });
   await f.ready();
   f.layer.setMode('ab');
   f.layer.setAssignment('a', S18);
   f.layer.setAssignment('b', L16);
   await settleTimes(8);
   assert.equal(controller.getActiveId(), 'esri-imagery');
+  assert.equal(f.diag().lease, true);
   assert.equal(f.snap().comparison.active, true);
-  assert.deepEqual(controller.calls, [['setStack', 'esri-imagery']]);
+  assert.deepEqual(controller.calls, []);
   return { controller, f };
 }
 
-test('a manual switch to Google 3D while a day is shown takes Esri back once and the divider stays', async () => {
+test('a manual stack switch while days are shown keeps the lease and the divider, and switches nothing back', async () => {
   const { controller, f } = await comparingOnEsri();
-  // The operator picks Google 3D by hand: the layer re-leases Esri at once.
-  await controller.setStack('photoreal');
+  // The operator picks OSM by hand: the lease rides along, no re-lease.
+  await controller.setStack('osm');
   await settleTimes(8);
-  assert.deepEqual(controller.calls, [
-    ['setStack', 'esri-imagery'],
-    ['setStack', 'photoreal'],
-    ['setStack', 'esri-imagery'],
-  ]);
-  assert.equal(controller.getActiveId(), 'esri-imagery');
+  assert.deepEqual(controller.calls, [['setStack', 'osm']]);
+  assert.equal(controller.acquisitions, 1, 'the same lease');
+  assert.equal(f.diag().lease, true);
+  assert.equal(controller.getActiveId(), 'osm');
   assert.equal(f.snap().shown.swipe, 'ab');
   assert.equal(f.snap().comparison.active, true);
   assert.equal(f.snap().comparison.suspended, false);
   assert.deepEqual(f.drapes(), { a: `${S18}|left`, b: `${L16}|right` });
-  assert.equal(
-    f.snap().notice,
-    'Imagery stays on Esri · CLEAR to use Google 3D',
-  );
+  assert.equal(f.snap().notice, null);
   assert.equal(f.snap().error, null);
-  // Once per switch generation: a repeated notification is not a new
-  // switch, and the re-lease's own switch landing on Google 3D (a fallback)
-  // is not the operator's.
+  // Repeated notifications are not new switches: nothing is acquired.
   controller.notify();
-  controller._activeId = 'photoreal';
   controller.notify();
   await settleTimes(8);
-  assert.equal(controller.calls.length, 3, 'no second re-lease');
-  controller._activeId = 'esri-imagery';
-  controller.notify();
-  // Globe stacks just rebind: Esri → OSM keeps the swipe and switches nothing.
-  await controller.setStack('osm');
+  assert.equal(controller.acquisitions, 1);
+  assert.equal(controller.calls.length, 1);
+  // And again to a third globe: the swipe follows the operator's map.
+  await controller.setStack('bing-aerial');
   await settleTimes(8);
-  assert.equal(controller.calls.length, 4);
-  assert.equal(controller.getActiveId(), 'osm');
+  assert.equal(controller.calls.length, 2);
+  assert.equal(controller.getActiveId(), 'bing-aerial');
+  assert.equal(f.diag().lease, true);
   assert.equal(f.snap().comparison.active, true);
   assert.deepEqual(f.drapes(), { a: `${S18}|left`, b: `${L16}|right` });
 });
 
-test('CLEAR after a re-lease hands Google 3D back and does not take Esri again', async () => {
+test('CLEAR releases the lease and switches nothing', async () => {
   const { controller, f } = await comparingOnEsri();
-  await controller.setStack('photoreal');
+  await controller.setStack('osm');
   await settleTimes(8);
-  assert.equal(controller.getActiveId(), 'esri-imagery');
-  const acquisitions = controller.acquisitions;
+  assert.equal(controller.getActiveId(), 'osm');
+  assert.equal(controller.acquisitions, 1);
   f.layer.clear();
   await settleTimes(8);
-  assert.equal(controller.getActiveId(), 'photoreal');
-  assert.deepEqual(controller.calls.at(-1), ['setStack', 'photoreal']);
-  assert.equal(controller.calls.length, 4);
-  assert.equal(controller.acquisitions, acquisitions, 'no new lease');
+  assert.equal(controller.getActiveId(), 'osm', 'the operator keeps their map');
+  assert.deepEqual(controller.calls, [['setStack', 'osm']]);
+  assert.equal(controller.acquisitions, 1, 'no new lease');
   assert.equal(f.diag().lease, false);
   assert.equal(f.snap().notice, 'Box and images cleared');
 });
 
-test('disable after a re-lease hands Google 3D back and does not take Esri again', async () => {
+test('disable releases the lease and switches nothing', async () => {
   const { controller, f } = await comparingOnEsri();
-  await controller.setStack('photoreal');
+  await controller.setStack('osm');
   await settleTimes(8);
-  const acquisitions = controller.acquisitions;
+  assert.equal(controller.acquisitions, 1);
   f.layer.disable();
   await settleTimes(8);
-  assert.equal(controller.getActiveId(), 'photoreal');
-  assert.equal(controller.calls.length, 4);
-  assert.equal(controller.acquisitions, acquisitions);
+  assert.equal(controller.getActiveId(), 'osm');
+  assert.deepEqual(controller.calls, [['setStack', 'osm']]);
+  assert.equal(controller.acquisitions, 1);
   assert.equal(f.diag().lease, false);
 });
 
-test('a re-lease refused by another owner says so, drapes without a swipe and does not loop', async () => {
-  const { controller, f } = await comparingOnEsri();
-  const acquire = controller.acquireImageryComparison;
-  controller.acquireImageryComparison = function () {
-    this.acquisitions += 1;
-    throw new Error('Imagery comparison is already held by nepal');
-  };
-  await controller.setStack('photoreal');
+test('a lease refused by another owner says so, drapes without a swipe and never retries', async () => {
+  const controller = leasingController({ subscribable: true });
+  const nepal = acquireImageryComparison(controller, { owner: 'nepal' });
+  await nepal.ready;
+  controller.calls.length = 0;
+  const f = fixture({ controller, hostKind: 'globe' });
+  await f.ready();
+  f.layer.setMode('ab');
+  f.layer.setAssignment('a', S18);
+  f.layer.setAssignment('b', L16);
   await settleTimes(8);
-  assert.equal(controller.acquisitions, 2, 'one attempt');
+  assert.equal(controller.acquisitions, 1, 'one attempt');
   assert.equal(f.snap().error, 'Comparison in use by another scene');
-  assert.notEqual(
-    f.snap().notice,
-    'Imagery stays on Esri · CLEAR to use Google 3D',
-  );
   assert.equal(f.snap().comparison.active, false);
-  assert.equal(f.owned().a.kind, 'tileset');
-  assert.equal(f.owned().a.splitDirection, 'none');
-  // More notifications and renders never try again.
+  assert.deepEqual(f.drapes(), { a: `${S18}|none`, b: `${L16}|none` });
+  // Switches, notifications and renders never try again.
+  await controller.setStack('osm');
   controller.notify();
   controller.notify();
   f.layer.setAlpha(0.5);
   f.layer.setMode('basemap');
   f.layer.setMode('ab');
   await settleTimes(8);
-  assert.equal(controller.acquisitions, 2);
-  assert.deepEqual(controller.calls.at(-1), ['setStack', 'photoreal']);
-  controller.acquireImageryComparison = acquire;
+  assert.equal(controller.acquisitions, 1);
+  assert.deepEqual(controller.calls, [['setStack', 'osm']]);
+  assert.equal(f.snap().error, 'Comparison in use by another scene');
+  await nepal.release();
 });
 
-test('without a lease (another owner held it first) a switch to Google 3D takes nothing', async () => {
+test('without a lease (another owner held it first) a switch takes nothing', async () => {
   const controller = leasingController({ subscribable: true });
   const nepal = acquireImageryComparison(controller, { owner: 'nepal' });
   await nepal.ready;
   controller.calls.length = 0;
-  const f = fixture({ controller, hostKind: 'tileset' });
+  const f = fixture({ controller, hostKind: 'globe' });
   await f.ready();
   f.layer.setMode('basemap');
   assert.equal(f.snap().error, 'Comparison in use by another scene');
-  await controller.setStack('photoreal');
+  await controller.setStack('osm');
   await settleTimes(8);
-  assert.deepEqual(controller.calls, [['setStack', 'photoreal']]);
+  assert.deepEqual(controller.calls, [['setStack', 'osm']]);
   assert.equal(f.snap().error, 'Comparison in use by another scene');
+  await nepal.release();
 });
 
 /**
- * The real `MapSourceController` on Google 3D over the default sources, with
- * Esri tiles that can fail after it activated (`failEsriTiles`) and an OSM
- * map that never activates, so a tile fallback recovers to Google 3D.
- * Every `setStack` (the layer's, the operator's, the fallback's) is
- * recorded in `calls`.
+ * The real `MapSourceController` on Esri over the default sources, with
+ * Esri tiles that can fail after it activated (`failEsriTiles`), so a tile
+ * fallback moves to OSM. Every `setStack` (the operator's, the fallback's)
+ * is recorded in `calls`.
  */
 function failingMapController() {
   const listeners = new Set();
@@ -680,20 +681,15 @@ function failingMapController() {
       return () => listeners.delete(fn);
     },
   };
-  const registry = createDefaultMapSources({ googleTileset: { show: true } });
+  const registry = createDefaultMapSources({});
   for (const source of registry.sources) {
     if (!source.imagery) continue;
     const id = source.descriptor.id;
-    source.imagery =
-      id === 'osm'
-        ? async () => {
-            throw new Error('OSM offline');
-          }
-        : async () => ({
-            id,
-            errorEvent:
-              id === 'esri-imagery' ? esriErrors : { addEventListener() {} },
-          });
+    source.imagery = async () => ({
+      id,
+      errorEvent:
+        id === 'esri-imagery' ? esriErrors : { addEventListener() {} },
+    });
     source.terrain = {
       id: 'keyless',
       create: async () => ({ provider: { id: 'terrain' } }),
@@ -701,7 +697,7 @@ function failingMapController() {
   }
   const viewer = {
     scene: {
-      globe: { show: false },
+      globe: { show: true },
       requestRender() {},
       frameState: {
         creditDisplay: {
@@ -715,7 +711,7 @@ function failingMapController() {
   };
   const controller = new MapSourceController(viewer, {
     registry,
-    initialStack: 'photoreal',
+    initialStack: 'esri-imagery',
     createImageryLayer: (provider) => ({ provider }),
     onError: () => {},
   });
@@ -733,7 +729,7 @@ function failingMapController() {
 }
 
 for (const path of ['subscription', 'stats poll']) {
-  test(`an automatic fallback to Google 3D drops the swipe instead of re-leasing Esri; a manual switch re-leases once (${path})`, async () => {
+  test(`an automatic fallback keeps the lease and the swipe on the next globe (${path})`, async () => {
     const { controller, calls, failEsriTiles } = failingMapController();
     // Without `subscribe` the layer watches the map from the stats poll.
     const attached =
@@ -746,45 +742,39 @@ for (const path of ['subscription', 'stats poll']) {
             acquireImageryComparison: (options) =>
               controller.acquireImageryComparison(options),
           };
-    const f = fixture({ controller: attached, hostKind: 'tileset' });
-    Object.defineProperty(f.hostState, 'kind', {
-      get: () =>
-        controller.getActiveId() === 'photoreal' ? 'tileset' : 'globe',
-    });
+    const f = fixture({ controller: attached, hostKind: 'globe' });
     const watch = async () => {
       await settleTimes(8);
       if (path === 'stats poll') f.layer.getStats();
       await settleTimes(8);
     };
+    // Activate Esri so its tile listener is live; the layer leases after.
+    await controller.setStack('esri-imagery');
     await f.ready();
     f.layer.setMode('ab');
     f.layer.setAssignment('a', S18);
     f.layer.setAssignment('b', L16);
     await watch();
     assert.equal(controller.getActiveId(), 'esri-imagery');
+    assert.equal(f.diag().lease, true);
     assert.equal(f.snap().comparison.active, true);
-    assert.deepEqual(calls, ['esri-imagery']);
+    assert.deepEqual(calls, ['esri-imagery'], 'the lease switches nothing');
 
-    // Esri tiles fail: the controller falls back to OSM, OSM cannot
-    // activate, and it recovers to Google 3D. Nobody chose Google 3D, so
-    // the layer lets the lease go and shows both days without a swipe.
+    // Esri tiles fail: the controller falls back to OSM on its own. OSM is
+    // a globe, so the lease rides along and the divider never drops.
     failEsriTiles();
     await watch();
     assert.deepEqual(calls, ['esri-imagery', 'osm'], 'no Esri retry');
-    assert.equal(controller.getActiveId(), 'photoreal');
+    assert.equal(controller.getActiveId(), 'osm');
     assert.equal(controller.getSwitchOrigin(), 'automatic');
-    assert.equal(f.diag().lease, false);
-    assert.equal(f.diag().host, 'tileset');
+    assert.equal(f.diag().lease, true);
+    assert.equal(f.diag().host, 'globe');
     assert.equal(f.snap().shown.swipe, 'ab');
-    assert.equal(f.snap().comparison.active, false);
-    assert.deepEqual(f.drapes(), { a: `${S18}|none`, b: `${L16}|none` });
-    assert.equal(f.owned().a.kind, 'tileset');
-    assert.equal(f.snap().error, 'Esri map unavailable · no swipe');
-    assert.notEqual(
-      f.snap().notice,
-      'Imagery stays on Esri · CLEAR to use Google 3D',
-    );
-    // More polls, renders and dead Esri listeners never retry.
+    assert.equal(f.snap().comparison.active, true);
+    assert.deepEqual(f.drapes(), { a: `${S18}|left`, b: `${L16}|right` });
+    assert.equal(f.owned().a.kind, 'globe');
+    assert.equal(f.snap().error, null);
+    // More polls, renders and dead Esri listeners change nothing.
     failEsriTiles();
     f.layer.setAlpha(0.5);
     f.layer.setMode('basemap');
@@ -792,24 +782,15 @@ for (const path of ['subscription', 'stats poll']) {
     await watch();
     assert.deepEqual(calls, ['esri-imagery', 'osm']);
 
-    // The operator picks Google 3D by hand: that is answered once.
-    await controller.setStack('photoreal');
+    // The operator switches back by hand: the same lease, still swiping.
+    await controller.setStack('esri-imagery');
     await watch();
     await watch();
-    assert.deepEqual(calls, [
-      'esri-imagery',
-      'osm',
-      'photoreal',
-      'esri-imagery',
-    ]);
+    assert.deepEqual(calls, ['esri-imagery', 'osm', 'esri-imagery']);
     assert.equal(controller.getActiveId(), 'esri-imagery');
     assert.equal(f.diag().lease, true);
     assert.equal(f.snap().comparison.active, true);
     assert.deepEqual(f.drapes(), { a: `${S18}|left`, b: `${L16}|right` });
-    assert.equal(
-      f.snap().notice,
-      'Imagery stays on Esri · CLEAR to use Google 3D',
-    );
     assert.equal(f.snap().error, null);
     controller.destroy();
   });

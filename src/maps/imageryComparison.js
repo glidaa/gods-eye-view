@@ -1,7 +1,7 @@
 /** Basemap that before/after imagery comparisons are read against. */
 export const IMAGERY_COMPARISON_STACK_ID = 'esri-imagery';
 
-const SWITCH_POLICIES = new Set(['preserve', 'esri', 'esri-if-photoreal']);
+const SWITCH_POLICIES = new Set(['preserve', 'esri']);
 const leases = new WeakMap();
 
 function comparisonTargetId(activeId, switchPolicy) {
@@ -10,8 +10,6 @@ function comparisonTargetId(activeId, switchPolicy) {
       `Unknown imagery comparison switch policy: ${switchPolicy}`,
     );
   if (switchPolicy === 'esri' && activeId !== IMAGERY_COMPARISON_STACK_ID)
-    return IMAGERY_COMPARISON_STACK_ID;
-  if (switchPolicy === 'esri-if-photoreal' && activeId === 'photoreal')
     return IMAGERY_COMPARISON_STACK_ID;
   return null;
 }

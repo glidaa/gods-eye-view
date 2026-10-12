@@ -27,37 +27,19 @@ test('Esri uses Re:Earth without keys and preserves ion terrain when configured'
     assert.deepEqual(calls, [
       'https://terrain.reearth.land/cesium-mesh/ellipsoid',
     ]);
-    assert.equal(
-      keyless.sources.find(({ descriptor }) => descriptor.id === 'photoreal')
-        .available,
-      false,
+    assert.equal(keyless.defaultId, 'esri-imagery');
+    assert.equal(keyless.unknownId, 'esri-imagery');
+    assert.ok(
+      keyless.sources.every(({ descriptor }) => descriptor.id !== 'photoreal'),
+      'no Google stack is offered',
     );
-    for (const credentials of [
-      { googleApiKey: 'test-key' },
-      { cesiumToken: 'test-token' },
-    ]) {
-      const keyed = createDefaultMapSources({
-        ...credentials,
-        googleTileset: { show: true },
-      });
-      assert.equal(
-        keyed.sources.find(({ descriptor }) => descriptor.id === 'photoreal')
-          .available,
-        true,
-      );
-      assert.equal(
-        keyed.sources.find(({ descriptor }) => descriptor.id === 'esri-imagery')
-          .terrain.id,
-        credentials.cesiumToken ? 'world' : 'keyless',
-      );
-      const failedTileset = createDefaultMapSources(credentials);
-      assert.equal(
-        failedTileset.sources.find(
-          ({ descriptor }) => descriptor.id === 'photoreal',
-        ).available,
-        false,
-      );
-    }
+    const keyed = createDefaultMapSources({ cesiumToken: 'test-token' });
+    assert.equal(
+      keyed.sources.find(({ descriptor }) => descriptor.id === 'esri-imagery')
+        .terrain.id,
+      'world',
+    );
+    assert.equal(keyed.defaultId, 'esri-imagery');
   } finally {
     Cesium.CesiumTerrainProvider.fromUrl = originalTerrain;
     Cesium.IonResource.fromAssetId = originalResource;
@@ -119,39 +101,45 @@ test('cancellation after ion metadata prevents terrain construction', async () =
   }
 });
 
+test('the satellite stack carries no on-screen static credit; the provider keeps full Esri attribution', async () => {
+  const originalFromUrl = Cesium.ArcGisMapServerImageryProvider.fromUrl;
+  const seen = [];
+  try {
+    Cesium.ArcGisMapServerImageryProvider.fromUrl = (url, options) => {
+      seen.push({ url, options });
+      return { url, options };
+    };
+    const sources = createDefaultMapSources();
+    const esri = sources.sources.find(
+      ({ descriptor }) => descriptor.id === 'esri-imagery',
+    );
+    assert.equal(esri.descriptor.label, 'Satellite');
+    assert.ok(!('credit' in esri), 'no on-screen static credit for Esri');
+    assert.ok(
+      sources.sources.every((source) => !('credit' in source)),
+      'every stack attributes via its provider lightbox entry',
+    );
+    await esri.imagery();
+    assert.equal(seen.length, 1);
+    assert.match(
+      String(seen[0].options.credit),
+      /Powered by Esri/,
+      'the provider credit line stays complete on record',
+    );
+    assert.match(
+      String(seen[0].options.credit),
+      /Maxar.*Earthstar Geographics.*GIS User Community/,
+      'all upstream imagery contributors stay credited',
+    );
+  } finally {
+    Cesium.ArcGisMapServerImageryProvider.fromUrl = originalFromUrl;
+  }
+});
+
 test('credentialed source factories reject an omitted token instead of consuming an SDK default', async () => {
   assert.throws(
     () => createIonImagery(Cesium.IonWorldImageryStyle.AERIAL, ''),
     /explicit token/,
   );
   await assert.rejects(createWorldTerrain(' '), /explicit ion token/);
-});
-
-test('both Google 3D routes keep tiles drawing while draped imagery loads', async () => {
-  const { createGoogleDirectTileset, createGoogleIonTileset } =
-    await import('./google3d.js');
-  const calls = [];
-  const sdk = {
-    createGooglePhotorealistic3DTileset: async (...args) => {
-      calls.push(args);
-      return 'direct';
-    },
-    IonResource: { fromAssetId: async (id, options) => ({ id, ...options }) },
-    Cesium3DTileset: {
-      fromUrl: async (...args) => {
-        calls.push(args);
-        return 'ion';
-      },
-    },
-  };
-  assert.equal(await createGoogleDirectTileset(sdk, 'key'), 'direct');
-  assert.equal(await createGoogleIonTileset(sdk, 'token'), 'ion');
-  assert.deepEqual(calls[0], [
-    { key: 'key', onlyUsingWithGoogleGeocoder: true },
-    { asynchronouslyLoadImagery: true },
-  ]);
-  assert.equal(calls[1][0].id, 2275207);
-  assert.equal(calls[1][0].accessToken, 'token');
-  assert.equal(calls[1][1].asynchronouslyLoadImagery, true);
-  assert.equal(calls[1][1].enableCollision, true);
 });

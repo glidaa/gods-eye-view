@@ -41,6 +41,11 @@ const PANEL_GROUPS = [
       'local-datacenters',
       'telegeography-submarine-cables',
       'local-dams',
+      'local-au-ports',
+      'local-au-mines',
+      'local-au-power',
+      'aus-energy-grid',
+      'nem-generation',
     ],
   },
   {
@@ -164,6 +169,22 @@ export class LayerPanel {
     if (container && this._recentImageryFactory)
       this._recentImageryPanel = this._recentImageryFactory(container) || null;
   }
+  /**
+   * Refresh the DATA LAYERS header counts: how many toggleable layers are
+   * on (showing) out of how many the panel offers (available).
+   * @param {Array<object>} layers - `getAll()` rows.
+   * @returns {void}
+   */
+  _syncShowingCounts(layers) {
+    const el =
+      this._toggleContainer?.ownerDocument?.getElementById?.(
+        'data-layer-counts',
+      );
+    if (!el) return;
+    const visible = (layers || []).filter((layer) => layer?.showInTogglePanel);
+    const shown = visible.filter((layer) => layer?.enabled).length;
+    el.textContent = `SHOWING ${shown} · ${visible.length} AVAILABLE`;
+  }
   _bind(element, type, listener) {
     element.addEventListener(type, listener);
     this._removers.push(() => element.removeEventListener(type, listener));
@@ -198,6 +219,7 @@ export class LayerPanel {
           (PANEL_POSITIONS.get(a.id) ?? PANEL_ORDER.length) -
           (PANEL_POSITIONS.get(b.id) ?? PANEL_ORDER.length),
       );
+    this._syncShowingCounts(layers);
     let previousGroup = '';
     for (const layer of layers) {
       if (!layer.showInTogglePanel) continue;
@@ -259,8 +281,10 @@ export class LayerPanel {
           console.warn(`[Data] ${layer.id} toggle error:`, error);
         } finally {
           const current = this.getAll().find(({ id }) => id === layer.id);
-          if (!this._destroyed && current && this._generation === generation)
+          if (!this._destroyed && current && this._generation === generation) {
             this._syncToggleButton(toggle, current);
+            this._syncShowingCounts(this.getAll());
+          }
         }
       });
 
@@ -512,6 +536,9 @@ export class LayerPanel {
         row.querySelector('.data-row-list'),
       );
     }
+    // Layers toggled outside this panel (CCTV panel, voice, scenes) arrive
+    // here via the activity subscription; the header counts must follow.
+    this._syncShowingCounts(this.getAll());
     this._refreshWeatherPanel();
   }
 
